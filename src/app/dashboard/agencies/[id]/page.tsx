@@ -89,8 +89,8 @@ export default function AgencyDetailsPage({ params }: { params: Promise<{ id: st
                                     </div>
                                 </div>
                                 <div className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${branch.lead_temperature === 'hot' ? 'bg-error/10 text-error' :
-                                        branch.lead_temperature === 'warm' ? 'bg-warning/10 text-warning' :
-                                            'bg-primary/10 text-primary'
+                                    branch.lead_temperature === 'warm' ? 'bg-warning/10 text-warning' :
+                                        'bg-primary/10 text-primary'
                                     }`}>
                                     {branch.lead_temperature}
                                 </div>
@@ -102,9 +102,13 @@ export default function AgencyDetailsPage({ params }: { params: Promise<{ id: st
                                     <span>{branch.city}, {branch.country}</span>
                                 </div>
                                 {branch.phone && (
-                                    <div className="flex items-center gap-2">
-                                        <Phone className="h-4 w-4 text-gray-400" />
-                                        <span>{branch.phone}</span>
+                                    <div className="flex items-start gap-2">
+                                        <Phone className="h-4 w-4 text-gray-400 mt-1" />
+                                        <div className="flex flex-col">
+                                            {branch.phone.split(',').map((phone, i) => (
+                                                <span key={i} className="block">{phone.trim()}</span>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                                 {branch.email && (

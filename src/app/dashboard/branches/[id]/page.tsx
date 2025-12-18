@@ -7,11 +7,12 @@ import {
     ArrowLeft, Loader2, MapPin,
     Phone, Mail, Globe, Instagram,
     Video, Save, Plus, History,
-    MessageSquare
+    MessageSquare, Trash2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { countries, statesByCountry, Country } from '@/utils/locationData'
 
 export default function BranchDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
@@ -22,6 +23,7 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
     const [loading, setLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [newNote, setNewNote] = useState('')
+    const [phoneList, setPhoneList] = useState<string[]>([])
     const router = useRouter()
 
     useEffect(() => {
@@ -37,6 +39,7 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                 setAgency(agencyRes.data)
                 setNotes(notesRes.data || [])
                 setLogs(logsRes.data || [])
+                setPhoneList(branchData.phone ? branchData.phone.split(',').map((p: string) => p.trim()) : [])
             }
             setLoading(false)
         }
@@ -183,32 +186,104 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                         <h2 className="text-lg font-bold text-gray-900">Información de Contacto</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <MapPin className="h-5 w-5 text-gray-400" />
-                                    <input
-                                        className="text-sm border-none p-0 focus:ring-0 w-full"
-                                        defaultValue={`${branch.city}, ${branch.state}, ${branch.country}`}
-                                        onBlur={(e) => {
-                                            const [city, state, country] = e.target.value.split(',').map(s => s.trim())
-                                            if (city !== branch.city) handleUpdateBranch('city', city)
-                                            // This is a bit complex for a single input, usually split fields.
-                                        }}
-                                    />
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <MapPin className="h-4 w-4 text-gray-400" />
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ubicación</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2 pl-6">
+                                        <input
+                                            className="text-sm border-b border-gray-100 py-1 focus:ring-0 w-full"
+                                            placeholder="Ciudad"
+                                            value={branch.city || ''}
+                                            onChange={(e) => setBranch({ ...branch, city: e.target.value })}
+                                            onBlur={(e) => handleUpdateBranch('city', e.target.value)}
+                                        />
+                                        <select
+                                            className="text-sm border-b border-gray-100 py-1 focus:ring-0 w-full bg-transparent"
+                                            value={branch.state || ''}
+                                            onChange={(e) => {
+                                                const newState = e.target.value;
+                                                setBranch({ ...branch, state: newState });
+                                                handleUpdateBranch('state', newState);
+                                            }}
+                                        >
+                                            <option value="" disabled>Estado/Departamento</option>
+                                            {statesByCountry[branch.country as Country]?.map(s => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            className="text-sm border-b border-gray-100 py-1 focus:ring-0 w-full bg-transparent"
+                                            value={branch.country || 'Venezuela'}
+                                            onChange={(e) => {
+                                                const newCountry = e.target.value as Country;
+                                                const newState = statesByCountry[newCountry][0] || '';
+                                                setBranch({ ...branch, country: newCountry, state: newState });
+                                                handleUpdateBranch('country', newCountry);
+                                                handleUpdateBranch('state', newState);
+                                            }}
+                                        >
+                                            {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <Phone className="h-5 w-5 text-gray-400" />
-                                    <input
-                                        disabled={isSaving}
-                                        className="text-sm border-none p-0 focus:ring-0 w-full"
-                                        defaultValue={branch.phone || 'Sin teléfono'}
-                                        onBlur={(e) => handleUpdateBranch('phone', e.target.value)}
-                                    />
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Phone className="h-4 w-4 text-gray-400" />
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Teléfonos</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setPhoneList([...phoneList, ''])}
+                                            className="text-primary hover:text-primary/80 transition-colors"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2 pl-6">
+                                        {phoneList.map((phone, index) => (
+                                            <div key={index} className="flex items-center gap-2">
+                                                <input
+                                                    className="text-sm border-b border-gray-100 py-1 focus:ring-0 flex-1"
+                                                    value={phone}
+                                                    placeholder="Nº de teléfono"
+                                                    onChange={(e) => {
+                                                        const newList = [...phoneList];
+                                                        newList[index] = e.target.value;
+                                                        setPhoneList(newList);
+                                                    }}
+                                                    onBlur={() => {
+                                                        const filtered = phoneList.filter(p => p.trim() !== '');
+                                                        handleUpdateBranch('phone', filtered.join(', '));
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const newList = phoneList.filter((_, i) => i !== index);
+                                                        setPhoneList(newList);
+                                                        handleUpdateBranch('phone', newList.join(', '));
+                                                    }}
+                                                    className="text-gray-300 hover:text-error transition-colors"
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {phoneList.length === 0 && (
+                                            <p className="text-xs text-gray-400 italic">No hay teléfonos registrados</p>
+                                        )}
+                                    </div>
                                 </div>
+
                                 <div className="flex items-center gap-3">
                                     <Mail className="h-5 w-5 text-gray-400" />
                                     <input
                                         className="text-sm border-none p-0 focus:ring-0 w-full"
-                                        defaultValue={branch.email || 'Sin email'}
+                                        value={branch.email || ''}
+                                        placeholder="Email"
+                                        onChange={(e) => setBranch({ ...branch, email: e.target.value })}
                                         onBlur={(e) => handleUpdateBranch('email', e.target.value)}
                                     />
                                 </div>

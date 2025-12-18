@@ -43,13 +43,16 @@ export default function DashboardLayout({
         router.push('/login')
     }
 
+    /* 
     if (loading) {
+        console.log('[DashboardLayout] Rendering spinner')
         return (
             <div className="flex h-screen items-center justify-center bg-background">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             </div>
         )
     }
+    */
 
     const navItems = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -59,9 +62,8 @@ export default function DashboardLayout({
 
     const SidebarContent = () => (
         <div className="flex h-full flex-col bg-white shadow-sm transition-all duration-300">
-            <div className="p-6">
-                <h1 className="text-xl font-bold text-primary">CRM Lite</h1>
-                <p className="text-xs text-gray-500 uppercase tracking-wider mt-1">Alana Tours</p>
+            <div className="p-6 flex justify-center">
+                <img src="/logo_alana.svg" alt="Alana Tours" className="h-12 w-auto" />
             </div>
 
             <nav className="flex-1 px-4 space-y-1">
@@ -133,7 +135,9 @@ export default function DashboardLayout({
                     <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-gray-600">
                         <Menu className="h-6 w-6" />
                     </button>
-                    <h1 className="ml-2 font-bold text-primary">CRM Lite</h1>
+                    <div className="ml-4">
+                        <img src="/logo_alana.svg" alt="Alana Tours" className="h-8 w-auto" />
+                    </div>
                 </header>
                 <div className="p-4 md:p-8 animate-in fade-in duration-300">
                     {children}
