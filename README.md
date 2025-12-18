@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CRM Lite – Agencias de Viajes
 
-## Getting Started
+Sistema interno de gestión de agencias y sucursales diseñado para **Alana Tours**.
 
-First, run the development server:
+## 🚀 Objetivos Alcanzados (MVP)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### 1. Gestión de Datos y CRM
+- **Agencias y Sucursales**: Implementación de estructura jerárquica (Agencia > Sucursal).
+- **Clasificación Comercial**: Gestión de estados de contacto, temperatura de leads y tipo de relación (Lead/Cliente).
+- **Gestión de Notas**: Sistema de bitácora detallada para cada sucursal.
+- **Importación Masiva**: Soporte para carga de archivos CSV y XLSX con detección de duplicados y previsualización.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Seguridad y Auditoría
+- **Autenticación**: Integración con Supabase Auth y perfiles de Superadmin.
+- **Recuperación de Contraseña**: Flujo personalizado mediante Supabase Edge Functions y SMTP de Hostinger.
+- **Historial de Auditoría**: Registro automático de todas las operaciones de escritura (creación, edición, notas, importaciones).
+- **RLS (Row Level Security)**: Protección de datos a nivel de base de datos para usuarios autenticados.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Interfaz y Experiencia (UX/UI)
+- **Diseño Premium**: Interfaz moderna con tipografía Nohemi y sistema de colores corporativos.
+- **Responsive**: Diseño adaptado a dispositivos móviles y escritorio.
+- **Dashboard**: Resumen visual de métricas clave del negocio.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Stack Tecnológico
+- **Frontend**: Next.js 15+ (App Router), TypeScript, Tailwind CSS, Framer Motion.
+- **Backend/Base de Datos**: Supabase (PostgreSQL).
+- **Infraestructura**: Hostinger (SMTP y Hosting).
 
-## Learn More
+## 📋 Próximos Pasos (Post-MVP)
+- Implementación de filtros avanzados en la lista de agencias.
+- Reportes exportables en PDF/Excel.
+- Dashboard con gráficas de rendimiento mensual.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+© 2024 Alana Tours - Desarrollado por Berion Company.
