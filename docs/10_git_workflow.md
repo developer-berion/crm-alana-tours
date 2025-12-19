@@ -40,3 +40,7 @@
 
 
 
+
+## Deployment
+
+See [11_deployment_guidelines.md](./11_deployment_guidelines.md) for detailed deployment instructions and Vercel specific rules.

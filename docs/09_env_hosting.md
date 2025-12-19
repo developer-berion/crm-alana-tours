@@ -1,42 +1,28 @@
-\# Environment \& Hosting
+# Environment & Hosting
 
+## Frontend Hosting
 
+- **Platform**: Vercel
+- **Integration**: GitHub (automatic deploys from `main`)
+- **Framework**: Next.js App Router
+- **Domain**: Hostinger (DNS pointing to Vercel)
 
-\## Frontend Hosting
+For deployment rules and troubleshooting, see [11_deployment_guidelines.md](./11_deployment_guidelines.md).
 
-\- Hostinger
+## Supabase Env Vars
 
-\- Static build from Next.js
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (Edge Functions only)
 
+## SMTP (Hostinger)
 
+- `SMTP_HOST=smtp.hostinger.com`
+- `SMTP_PORT=465`
+- `SMTP_SECURE=true`
+- `SMTP_USER=no-reply@domain.com`
+- `SMTP_PASSWORD=********`
 
-\## Supabase Env Vars
+## Notes
 
-\- NEXT\_PUBLIC\_SUPABASE\_URL
-
-\- NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY
-
-\- SUPABASE\_SERVICE\_ROLE\_KEY (Edge Functions only)
-
-
-
-\## SMTP (Hostinger)
-
-\- SMTP\_HOST=smtp.hostinger.com
-
-\- SMTP\_PORT=465
-
-\- SMTP\_SECURE=true
-
-\- SMTP\_USER=no-reply@domain.com
-
-\- SMTP\_PASSWORD=\*\*\*\*\*\*\*\*
-
-
-
-\## Notes
-
-\- SMTP credentials never exposed to frontend
-
-
-
+- SMTP credentials never exposed to frontend (only Edge Functions).
