@@ -7,7 +7,8 @@ import {
     ArrowLeft, Loader2, MapPin,
     Phone, Mail, Globe, Instagram, Facebook,
     Video, Save, Plus, History,
-    MessageSquare, Trash2, Map, Edit2, Archive, X, Check
+    MessageSquare, Trash2, Map, Edit2, Archive, X, Check,
+    User
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
@@ -296,6 +297,16 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                         <h2 className="text-lg font-bold text-gray-900">Información de Contacto</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
+                                <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
+                                    <User className="h-5 w-5 text-gray-400" />
+                                    <input
+                                        className="text-sm border-none p-0 focus:ring-0 w-full font-medium"
+                                        value={branch.contact_name || ''}
+                                        placeholder="Nombre de contacto"
+                                        onChange={(e) => setBranch({ ...branch, contact_name: e.target.value })}
+                                        onBlur={(e) => handleUpdateBranch('contact_name', e.target.value)}
+                                    />
+                                </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="h-4 w-4 text-gray-400" />
