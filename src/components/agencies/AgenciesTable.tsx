@@ -12,10 +12,9 @@ export type AgencyWithBranches = Agency & {
 interface AgenciesTableProps {
     agencies: AgencyWithBranches[]
     loading: boolean
-    onEdit: (agency: Agency) => void
 }
 
-export default function AgenciesTable({ agencies, loading, onEdit }: AgenciesTableProps) {
+export default function AgenciesTable({ agencies, loading }: AgenciesTableProps) {
     if (loading) {
         return (
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -62,10 +61,12 @@ export default function AgenciesTable({ agencies, loading, onEdit }: AgenciesTab
             {/* Table Header (Desktop/Tablet) */}
             <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50/50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 <div className="col-span-4 lg:col-span-3 pl-2">Agencia / Rep</div>
-                <div className="col-span-3 lg:col-span-3">Contacto</div>
-                <div className="col-span-2 lg:col-span-2 hidden lg:block">Ubicación</div>
-                <div className="col-span-3 lg:col-span-3">Estado / Temp</div>
-                <div className="col-span-2 lg:col-span-1 text-right pr-4">Acciones</div>
+                <div className="col-span-4 lg:col-span-3">Contacto</div>
+                <div className="col-span-1 lg:col-span-1 hidden lg:block">País</div>
+                <div className="col-span-1 lg:col-span-1 hidden lg:block">Ciudad</div>
+                <div className="col-span-1 lg:col-span-1 hidden lg:block">Fecha Reg.</div>
+                <div className="col-span-2 lg:col-span-1 text-center">N° Suc.</div>
+                <div className="col-span-2 lg:col-span-2">Estado / Temp</div>
             </div>
 
             {/* Table Body */}
@@ -79,7 +80,6 @@ export default function AgenciesTable({ agencies, loading, onEdit }: AgenciesTab
                             key={agency.id}
                             agency={agency}
                             primaryBranch={primaryBranch}
-                            onEdit={onEdit}
                         />
                     )
                 })}

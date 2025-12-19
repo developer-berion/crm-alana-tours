@@ -6,25 +6,28 @@ import { Agency, Branch } from '@/types/database'
 import { Building2, Plus, ArrowLeft, Loader2, MapPin, Phone, Mail, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import AddBranchModal from './AddBranchModal'
 
 export default function AgencyDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const [agency, setAgency] = useState<Agency | null>(null)
     const [branches, setBranches] = useState<Branch[]>([])
     const [loading, setLoading] = useState(true)
+    const [isModalOpen, setIsModalOpen] = useState(false)
     const router = useRouter()
 
-    useEffect(() => {
-        async function fetchData() {
-            const [agencyRes, branchesRes] = await Promise.all([
-                supabase.from('agencies').select('*').eq('id', id).single(),
-                supabase.from('branches').select('*').eq('agency_id', id).order('branch_name', { ascending: true })
-            ])
+    const fetchData = async () => {
+        const [agencyRes, branchesRes] = await Promise.all([
+            supabase.from('agencies').select('*').eq('id', id).single(),
+            supabase.from('branches').select('*').eq('agency_id', id).order('branch_name', { ascending: true })
+        ])
 
-            setAgency(agencyRes.data)
-            setBranches(branchesRes.data || [])
-            setLoading(false)
-        }
+        setAgency(agencyRes.data)
+        setBranches(branchesRes.data || [])
+        setLoading(false)
+    }
+
+    useEffect(() => {
         fetchData()
     }, [id])
 
@@ -66,11 +69,22 @@ export default function AgencyDetailsPage({ params }: { params: Promise<{ id: st
                             <p className="text-gray-600">{branches.length} sucursales registradas</p>
                         </div>
                     </div>
-                    <button className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-90 transition-all shadow-sm">
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-90 transition-all shadow-sm"
+                    >
                         <Plus className="h-4 w-4" /> Nueva Sucursal
                     </button>
                 </div>
             </div>
+
+            <AddBranchModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={fetchData}
+                agencyId={id}
+                agencyName={agency.name}
+            />
 
             <div className="grid grid-cols-1 gap-4">
                 <h2 className="text-xl font-bold text-gray-900">Sucursales</h2>

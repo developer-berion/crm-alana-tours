@@ -1,14 +1,14 @@
 'use client'
 
 import { Agency, Branch } from '@/types/database'
-import { MoreHorizontal, Edit2, ChevronRight, Phone, Mail, MapPin, Building2 } from 'lucide-react'
-import Link from 'next/link'
+import { Phone, Mail, MapPin, Building2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
+import { AgencyWithBranches } from './AgenciesTable'
+
 interface AgencyRowProps {
-    agency: Agency
+    agency: AgencyWithBranches
     primaryBranch?: Branch
-    onEdit: (agency: Agency) => void
 }
 
 const statusColors: Record<string, string> = {
@@ -39,7 +39,7 @@ const tempLabels: Record<string, string> = {
     hot: 'Caliente'
 }
 
-export default function AgencyRow({ agency, primaryBranch, onEdit }: AgencyRowProps) {
+export default function AgencyRow({ agency, primaryBranch }: AgencyRowProps) {
     const router = useRouter()
 
     // Handle row click to navigate
@@ -62,6 +62,7 @@ export default function AgencyRow({ agency, primaryBranch, onEdit }: AgencyRowPr
             {/* Desktop/Tablet Layout */}
             <div className="hidden md:grid grid-cols-12 gap-4 p-4 items-center">
                 {/* Name & Rep */}
+                {/* Name & Rep */}
                 <div className="col-span-4 lg:col-span-3 flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Building2 size={18} />
@@ -76,8 +77,8 @@ export default function AgencyRow({ agency, primaryBranch, onEdit }: AgencyRowPr
                     </div>
                 </div>
 
-                {/* Contact (Email) - Hidden on Tablet tight spaces if needed, but we keep it for now */}
-                <div className="col-span-3 lg:col-span-3 hidden md:flex flex-col justify-center min-w-0">
+                {/* Contact (Email) */}
+                <div className="col-span-4 lg:col-span-3 hidden md:flex flex-col justify-center min-w-0">
                     {primaryBranch?.email ? (
                         <div className="flex items-center gap-2 text-sm text-gray-600 truncate">
                             <Mail size={14} className="shrink-0 opacity-50" />
@@ -94,8 +95,8 @@ export default function AgencyRow({ agency, primaryBranch, onEdit }: AgencyRowPr
                     )}
                 </div>
 
-                {/* Location - Hidden on smaller Tablet */}
-                <div className="col-span-2 lg:col-span-2 hidden lg:flex items-center gap-2 text-sm text-gray-600">
+                {/* Location - Country */}
+                <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center gap-2 text-sm text-gray-600">
                     {primaryBranch?.country ? (
                         <>
                             <MapPin size={14} className="shrink-0 opacity-50" />
@@ -106,8 +107,25 @@ export default function AgencyRow({ agency, primaryBranch, onEdit }: AgencyRowPr
                     )}
                 </div>
 
+                {/* Location - City */}
+                <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center text-sm text-gray-600">
+                    <span className="truncate">{primaryBranch?.city || '-'}</span>
+                </div>
+
+                {/* Date */}
+                <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center text-sm text-gray-600">
+                    {agency.created_at ? new Date(agency.created_at).toLocaleDateString() : '-'}
+                </div>
+
+                {/* Branches Count */}
+                <div className="col-span-2 lg:col-span-1 flex items-center justify-center">
+                    <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
+                        {agency.branches?.length || 0}
+                    </span>
+                </div>
+
                 {/* Status & Temp */}
-                <div className="col-span-3 lg:col-span-3 flex flex-wrap gap-2 items-center">
+                <div className="col-span-3 lg:col-span-2 flex flex-wrap gap-2 items-center">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[contactStatus]}`}>
                         {statusLabels[contactStatus]}
                     </span>
@@ -116,22 +134,7 @@ export default function AgencyRow({ agency, primaryBranch, onEdit }: AgencyRowPr
                     </span>
                 </div>
 
-                {/* Actions */}
-                <div className="col-span-2 lg:col-span-1 flex justify-end gap-2">
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onEdit(agency)
-                        }}
-                        className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        title="Editar"
-                    >
-                        <Edit2 size={16} />
-                    </button>
-                    <div className="p-2 text-gray-300">
-                        <ChevronRight size={16} />
-                    </div>
-                </div>
+
             </div>
 
             {/* Mobile Layout (< 768px) */}
@@ -154,15 +157,7 @@ export default function AgencyRow({ agency, primaryBranch, onEdit }: AgencyRowPr
                             </div>
                         </div>
                     </div>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onEdit(agency)
-                        }}
-                        className="p-2 -mr-2 text-gray-400 hover:text-primary rounded-lg"
-                    >
-                        <Edit2 size={18} />
-                    </button>
+
                 </div>
 
                 <div className="flex flex-wrap gap-2 pl-[3.25rem]">

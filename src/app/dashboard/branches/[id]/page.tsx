@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { Branch, Agency, AgencyNote, ActivityLog } from '@/types/database'
 import {
     ArrowLeft, Loader2, MapPin,
-    Phone, Mail, Globe, Instagram,
+    Phone, Mail, Globe, Instagram, Facebook,
     Video, Save, Plus, History,
-    MessageSquare, Trash2
+    MessageSquare, Trash2, Map, Edit2, Archive, X, Check
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
@@ -20,9 +20,13 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
     const [agency, setAgency] = useState<Agency | null>(null)
     const [notes, setNotes] = useState<AgencyNote[]>([])
     const [logs, setLogs] = useState<ActivityLog[]>([])
+    const [authors, setAuthors] = useState<Record<string, { name: string, email: string }>>({})
     const [loading, setLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [newNote, setNewNote] = useState('')
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+    const [editingNoteContent, setEditingNoteContent] = useState('')
+    const [showArchived, setShowArchived] = useState(false)
     const [phoneList, setPhoneList] = useState<string[]>([])
     const router = useRouter()
 
@@ -40,6 +44,20 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                 setNotes(notesRes.data || [])
                 setLogs(logsRes.data || [])
                 setPhoneList(branchData.phone ? branchData.phone.split(',').map((p: string) => p.trim()) : [])
+
+                // Fetch authors for notes and logs
+                const userIds = new Set<string>()
+                notesRes.data?.forEach(n => userIds.add(n.created_by))
+                logsRes.data?.forEach(l => userIds.add(l.user_id))
+
+                if (userIds.size > 0) {
+                    const { data: profiles } = await supabase.from('profiles').select('id, name, email').in('id', Array.from(userIds))
+                    if (profiles) {
+                        const authorMap: Record<string, { name: string, email: string }> = {}
+                        profiles.forEach(p => authorMap[p.id] = p)
+                        setAuthors(authorMap)
+                    }
+                }
             }
             setLoading(false)
         }
@@ -73,6 +91,16 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                     .select('*').eq('branch_id', id).order('created_at', { ascending: false }).limit(5)
                 setLogs(newLogs || [])
             }
+        } else {
+            console.error(`Error updating field ${field}:`, {
+                message: (error as any).message,
+                code: (error as any).code,
+                details: (error as any).details,
+                hint: (error as any).hint
+            })
+            alert(`Error al guardar: ${(error as any).message || 'Error desconocido'}`)
+            // Revert value in local state
+            setBranch({ ...branch })
         }
         setIsSaving(false)
     }
@@ -93,6 +121,14 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                 setNotes([noteData, ...notes])
                 setNewNote('')
 
+                // Add current user to authors if not present
+                if (!authors[user.id]) {
+                    const { data: profile } = await supabase.from('profiles').select('name, email').eq('id', user.id).single()
+                    if (profile) {
+                        setAuthors(prev => ({ ...prev, [user.id]: { name: profile.name, email: profile.email } }))
+                    }
+                }
+
                 // Log activity
                 await supabase.from('agency_activity_log').insert({
                     branch_id: id,
@@ -110,8 +146,82 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
         setIsSaving(false)
     }
 
+    const handleUpdateNote = async (noteId: string) => {
+        if (!editingNoteContent.trim()) return
+        setIsSaving(true)
+
+        const { error } = await supabase.from('agency_notes').update({
+            content: editingNoteContent,
+            updated_at: new Date().toISOString()
+        }).eq('id', noteId)
+
+        if (!error) {
+            setNotes(notes.map(n => n.id === noteId ? { ...n, content: editingNoteContent, updated_at: new Date().toISOString() } : n))
+            setEditingNoteId(null)
+            setEditingNoteContent('')
+        }
+        setIsSaving(false)
+    }
+
+    const handleArchiveNote = async (noteId: string, archive: boolean) => {
+        setIsSaving(true)
+        const { error } = await supabase.from('agency_notes').update({
+            archived: archive
+        }).eq('id', noteId)
+
+        if (!error) {
+            setNotes(notes.map(n => n.id === noteId ? { ...n, archived: archive } : n))
+        }
+        setIsSaving(false)
+    }
+
     if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
     if (!branch) return <div className="text-center py-12 text-error">Sucursal no encontrada.</div>
+
+    const shortenUrl = (url: string | null) => {
+        if (!url) return '';
+        try {
+            const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+            const domain = parsed.hostname.replace('www.', '');
+            return parsed.pathname.length > 1 ? `${domain}...` : domain;
+        } catch (e) {
+            return url;
+        }
+    };
+
+    const SocialLink = ({ icon: Icon, url, field, placeholder }: { icon: any, url: string | null, field: keyof Branch, placeholder: string }) => {
+        const [localValue, setLocalValue] = useState(url || '');
+
+        useEffect(() => {
+            setLocalValue(url || '');
+        }, [url]);
+
+        return (
+            <div className="flex items-center gap-3 group">
+                <Icon className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
+                <div className="flex-1 flex flex-col min-w-0">
+                    <input
+                        className="text-sm border-none p-0 focus:ring-0 w-full bg-transparent"
+                        value={localValue}
+                        placeholder={placeholder}
+                        onChange={(e) => setLocalValue(e.target.value)}
+                        onBlur={(e) => handleUpdateBranch(field, e.target.value)}
+                    />
+                    {url && (
+                        <a
+                            href={url.startsWith('http') ? url : `https://${url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-primary hover:underline truncate w-fit"
+                            title={url}
+                        >
+                            {shortenUrl(url)}
+                        </a>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="max-w-6xl mx-auto space-y-8">
@@ -226,6 +336,13 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                                         >
                                             {countries.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
+                                        <input
+                                            className="text-sm border-b border-gray-100 py-1 focus:ring-0 w-full"
+                                            placeholder="Dirección exacta"
+                                            value={branch.address || ''}
+                                            onChange={(e) => setBranch({ ...branch, address: e.target.value })}
+                                            onBlur={(e) => handleUpdateBranch('address', e.target.value)}
+                                        />
                                     </div>
                                 </div>
 
@@ -289,55 +406,159 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                                 </div>
                             </div>
                             <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <Globe className="h-5 w-5 text-gray-400" />
-                                    <input className="text-sm border-none p-0 focus:ring-0 w-full" defaultValue={branch.website_url || 'Sitio web'} onBlur={(e) => handleUpdateBranch('website_url', e.target.value)} />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Instagram className="h-5 w-5 text-gray-400" />
-                                    <input className="text-sm border-none p-0 focus:ring-0 w-full" defaultValue={branch.instagram_url || 'Instagram'} onBlur={(e) => handleUpdateBranch('instagram_url', e.target.value)} />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Video className="h-5 w-5 text-gray-400" />
-                                    <input className="text-sm border-none p-0 focus:ring-0 w-full" defaultValue={branch.tiktok_url || 'TikTok'} onBlur={(e) => handleUpdateBranch('tiktok_url', e.target.value)} />
-                                </div>
+                                <SocialLink
+                                    icon={Globe}
+                                    url={branch.website_url}
+                                    field="website_url"
+                                    placeholder="Sitio web"
+                                />
+                                <SocialLink
+                                    icon={Instagram}
+                                    url={branch.instagram_url}
+                                    field="instagram_url"
+                                    placeholder="Instagram"
+                                />
+                                <SocialLink
+                                    icon={Facebook}
+                                    url={branch.facebook_url}
+                                    field="facebook_url"
+                                    placeholder="Facebook"
+                                />
+                                <SocialLink
+                                    icon={Video}
+                                    url={branch.tiktok_url}
+                                    field="tiktok_url"
+                                    placeholder="TikTok"
+                                />
+                                <SocialLink
+                                    icon={Map}
+                                    url={branch.google_maps_url}
+                                    field="google_maps_url"
+                                    placeholder="Google Maps URL"
+                                />
                             </div>
                         </div>
                     </section>
 
                     {/* Notes */}
-                    <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-                        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
                             <MessageSquare className="h-5 w-5 text-primary" /> Notas y Seguimiento
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="flex gap-2">
-                                <textarea
-                                    value={newNote}
-                                    onChange={(e) => setNewNote(e.target.value)}
-                                    placeholder="Añadir una nota de seguimiento..."
-                                    className="flex-1 rounded-xl border-gray-200 text-sm focus:ring-primary focus:border-primary resize-none h-20"
-                                />
-                                <button
-                                    onClick={handleAddNote}
-                                    disabled={isSaving || !newNote.trim()}
-                                    className="bg-primary text-white p-3 rounded-xl disabled:opacity-50 h-fit"
-                                >
-                                    <Plus className="h-5 w-5" />
-                                </button>
-                            </div>
-                            <div className="space-y-4">
-                                {notes.map((note) => (
-                                    <div key={note.id} className="p-4 rounded-xl bg-gray-50 border border-gray-100 italic text-sm text-gray-700">
-                                        <p className="mb-2">{note.content}</p>
-                                        <p className="text-[10px] text-gray-400 not-italic uppercase tracking-widest font-bold">
-                                            {formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: es })}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
-                    </section>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Ver archivadas</span>
+                            <button
+                                onClick={() => setShowArchived(!showArchived)}
+                                className={`w-8 h-4 rounded-full transition-colors relative ${showArchived ? 'bg-primary' : 'bg-gray-200'}`}
+                            >
+                                <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${showArchived ? 'left-4.5' : 'left-0.5'}`} style={{ left: showArchived ? '18px' : '2px' }} />
+                            </button>
+                        </div>
+                    </h2>
+                    <div className="space-y-6">
+                        <div className="flex gap-3">
+                            <textarea
+                                value={newNote}
+                                onChange={(e) => setNewNote(e.target.value)}
+                                placeholder="Añadir una nota de seguimiento..."
+                                className="flex-1 rounded-xl border-gray-200 text-sm focus:ring-primary focus:border-primary resize-none h-20"
+                            />
+                            <button
+                                onClick={handleAddNote}
+                                disabled={isSaving || !newNote.trim()}
+                                className="bg-primary text-white p-3 rounded-xl disabled:opacity-50 h-fit hover:bg-primary/90 transition-colors"
+                            >
+                                <Plus className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                            {notes.filter(n => showArchived ? true : !n.archived).length === 0 && (
+                                <p className="text-center text-gray-400 text-sm py-4 italic">No hay notas visibles</p>
+                            )}
+                            {notes.filter(n => showArchived ? true : !n.archived).map((note) => (
+                                <div
+                                    key={note.id}
+                                    className={`group p-4 rounded-xl border relative transition-all ${note.archived
+                                        ? 'bg-gray-50 border-gray-200 opacity-60 hover:opacity-100'
+                                        : 'bg-white border-gray-100 shadow-sm hover:shadow-md'
+                                        }`}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                                                {(authors[note.created_by]?.name || '?').charAt(0)}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-gray-900">
+                                                    {authors[note.created_by]?.name || 'Usuario desconocido'}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400">
+                                                    {formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: es })}
+                                                    {note.updated_at && note.updated_at !== note.created_at && ' (Editado)'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {!note.archived && (
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingNoteId(note.id)
+                                                        setEditingNoteContent(note.content)
+                                                    }}
+                                                    className="p-1.5 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleArchiveNote(note.id, !note.archived)}
+                                                className={`p-1.5 rounded-lg transition-colors ${note.archived
+                                                    ? 'text-primary bg-primary/10 hover:bg-primary/20'
+                                                    : 'text-gray-400 hover:text-error hover:bg-error/5'
+                                                    }`}
+                                                title={note.archived ? "Desarchivar" : "Archivar"}
+                                            >
+                                                <Archive className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {editingNoteId === note.id ? (
+                                        <div className="mt-2 space-y-2">
+                                            <textarea
+                                                value={editingNoteContent}
+                                                onChange={(e) => setEditingNoteContent(e.target.value)}
+                                                className="w-full rounded-lg border-gray-200 text-sm focus:ring-primary focus:border-primary resize-y min-h-[80px]"
+                                                autoFocus
+                                            />
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => setEditingNoteId(null)}
+                                                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg hover:bg-gray-200"
+                                                >
+                                                    Cancelar
+                                                </button>
+                                                <button
+                                                    onClick={() => handleUpdateNote(note.id)}
+                                                    className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
+                                                >
+                                                    Guardar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap pl-8 relative">
+                                            {note.archived && (
+                                                <span className="absolute left-8 -top-6 text-[10px] font-bold text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded">ARCHIVADA</span>
+                                            )}
+                                            {note.content}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right Column: Audit Log */}

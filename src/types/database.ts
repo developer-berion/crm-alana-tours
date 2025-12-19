@@ -20,7 +20,10 @@ export interface Branch {
     city: string | null
     instagram_url: string | null
     tiktok_url: string | null
+    facebook_url: string | null
     website_url: string | null
+    address: string | null
+    google_maps_url: string | null
     contact_status: ContactStatus
     lead_temperature: LeadTemperature
     relationship_type: RelationshipType
@@ -35,6 +38,8 @@ export interface AgencyNote {
     content: string
     created_by: string
     created_at: string
+    updated_at: string
+    archived: boolean
 }
 
 export interface ActivityLog {

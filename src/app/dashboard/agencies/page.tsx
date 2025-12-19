@@ -11,7 +11,11 @@ export default function AgenciesPage() {
     const [agencies, setAgencies] = useState<AgencyWithBranches[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [tempFilter, setTempFilter] = useState('all')
+    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
     const [isModalOpen, setIsModalOpen] = useState(false)
+
     // Placeholder for edit functionality if we want to reuse the modal or just navigate
     // For now, onEdit will just open the detail page or we could open a modal if the modal supported editing.
     // The requirement says "Edit button goes to edit screen/modal (use existing pattern)".
@@ -43,6 +47,7 @@ export default function AgenciesPage() {
         const { data, error } = await supabase
             .from('agencies')
             .select('*, branches(*)')
+            // Initial fetch order, though we will sort fully on client side
             .order('name', { ascending: true })
 
         if (error) {
@@ -59,28 +64,41 @@ export default function AgenciesPage() {
 
     const filteredAgencies = agencies.filter(a => {
         const searchLower = search.toLowerCase()
-        // Search by agency name
-        if (a.name.toLowerCase().includes(searchLower)) return true
-
-        // Search by branch details (representative, email, status)
         const primaryBranch = a.branches?.find(b => b.branch_name === 'Principal') || a.branches?.[0]
-        if (primaryBranch) {
-            if (primaryBranch.contact_name?.toLowerCase().includes(searchLower)) return true
-            if (primaryBranch.email?.toLowerCase().includes(searchLower)) return true
-            if (primaryBranch.contact_status?.toLowerCase().includes(searchLower)) return true
+
+        // 1. Status Filter
+        if (statusFilter !== 'all') {
+            const currentStatus = primaryBranch?.contact_status || 'not_contacted'
+            if (currentStatus !== statusFilter) return false
         }
 
-        return false
-    })
+        // 2. Temp Filter
+        if (tempFilter !== 'all') {
+            const currentTemp = primaryBranch?.lead_temperature || 'cold'
+            if (currentTemp !== tempFilter) return false
+        }
 
-    const handleEdit = (agency: Agency) => {
-        // Since we don't have a dedicated edit modal ready in the codebase viewed so far,
-        // and I shouldn't build new unrelated features,
-        // I will redirect to the detail page where they can likely manage it.
-        // Or if the user really wants a modal, I'd need to refactor AddAgencyModal.
-        // For this task scope "List View", I'll stick to navigation.
-        window.location.href = `/dashboard/agencies/${agency.id}`
-    }
+        // 3. Search (Name OR Branch details)
+        if (searchLower) {
+            // Check Agency Name
+            if (a.name.toLowerCase().includes(searchLower)) return true
+
+            // Check Branch Details
+            if (primaryBranch) {
+                if (primaryBranch.contact_name?.toLowerCase().includes(searchLower)) return true
+                if (primaryBranch.email?.toLowerCase().includes(searchLower)) return true
+                if (primaryBranch.contact_status?.toLowerCase().includes(searchLower)) return true
+            }
+            return false // If search is active and no match found
+        }
+
+        return true
+    }).sort((a, b) => {
+        // 4. Sorting by Date
+        const dateA = new Date(a.created_at || 0).getTime()
+        const dateB = new Date(b.created_at || 0).getTime()
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
+    })
 
     return (
         <div className="space-y-6">
@@ -104,23 +122,64 @@ export default function AgenciesPage() {
                 onSuccess={fetchAgencies}
             />
 
-            {/* Search */}
-            <div className="relative max-w-md w-full">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                    type="text"
-                    placeholder="Buscar por nombre, representante o estado..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white shadow-sm"
-                />
+            {/* Filters & Search Bar */}
+            <div className="flex flex-col md:flex-row gap-4">
+                {/* Search */}
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre, representante o estado..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white shadow-sm"
+                    />
+                </div>
+
+                {/* Filter Controls Group */}
+                <div className="flex flex-wrap gap-2 md:flex-nowrap">
+                    {/* Status Filter */}
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white shadow-sm text-gray-600 text-sm font-medium"
+                    >
+                        <option value="all">Todos los Estados</option>
+                        <option value="not_contacted">No Contactado</option>
+                        <option value="contacted">Contactado</option>
+                        <option value="waiting_response">Esperando Respuesta</option>
+                        <option value="rejected">Rechazado</option>
+                        <option value="interested">Interesado</option>
+                    </select>
+
+                    {/* Temp Filter */}
+                    <select
+                        value={tempFilter}
+                        onChange={(e) => setTempFilter(e.target.value)}
+                        className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white shadow-sm text-gray-600 text-sm font-medium"
+                    >
+                        <option value="all">Todas las Temp.</option>
+                        <option value="cold">Frío</option>
+                        <option value="warm">Tibio</option>
+                        <option value="hot">Caliente</option>
+                    </select>
+
+                    {/* Date Sort */}
+                    <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                        className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white shadow-sm text-gray-600 text-sm font-medium"
+                    >
+                        <option value="desc">Más recientes</option>
+                        <option value="asc">Más antiguos</option>
+                    </select>
+                </div>
             </div>
 
             {/* Table/List */}
             <AgenciesTable
                 agencies={filteredAgencies}
                 loading={loading}
-                onEdit={handleEdit}
             />
         </div>
     )

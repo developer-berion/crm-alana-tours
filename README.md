@@ -6,7 +6,10 @@ Sistema interno de gestión de agencias y sucursales diseñado para **Alana Tour
 
 ### 1. Gestión de Datos y CRM
 - **Agencias y Sucursales**: Implementación de estructura jerárquica (Agencia > Sucursal).
-- **Vista de Agencias Refactorizada**: Interfaz estilo CRM con lista/tabla escalable para 100+ registros, móvil-first y optimizada para escaneo rápido.
+- **Vista de Agencias Mejorada**:
+  - Lista interactiva estilo CRM escalable.
+  - **Filtros y Ordenamiento**: Filtrado por Estado y Temperatura, búsqueda por texto y ordenamiento por Fecha de Ingreso.
+  - **Columnas Informativas**: Nuevos campos visuales para "Ciudad" y "N° de Sucursales".
 - **Soporte Multi-Teléfono**: Capacidad para gestionar múltiples números de contacto por agencia y sucursal.
 - **Ubicaciones Dinámicas**: Selección inteligente de País y Estado/Departamento mediante utilitarios centralizados.
 - **Clasificación Comercial**: Gestión de estados de contacto, temperatura de leads y tipo de relación (Lead/Cliente).
@@ -32,7 +35,6 @@ Sistema interno de gestión de agencias y sucursales diseñado para **Alana Tour
 - **Infraestructura**: Vercel (Hosting), GitHub (CI/CD), Hostinger (SMTP).
 
 ## 📋 Próximos Pasos (Post-MVP)
-- Implementación de filtros avanzados interactivos en la lista de agencias.
 - Reportes exportables en PDF/Excel.
 - Dashboard con gráficas de rendimiento mensual.
 - Sistema de notificaciones en tiempo real.
