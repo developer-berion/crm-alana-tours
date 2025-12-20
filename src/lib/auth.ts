@@ -22,7 +22,12 @@ export async function hashPassword(password: string): Promise<string> {
 
 // Verify a password against a hash
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash)
+    try {
+        return await bcrypt.compare(password, hash)
+    } catch (error) {
+        console.error('Error verifying password:', error)
+        return false
+    }
 }
 
 // Generate a secure random password
@@ -55,9 +60,11 @@ export async function createSession(userId: string): Promise<string> {
     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000)
 
     // Store session in database
+    // Using DELETE + INSERT because unique constraint on user_id might be missing in production
+    await pool.query('DELETE FROM sessions WHERE user_id = $1', [userId])
+
     await pool.query(
-        `INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO UPDATE SET id = $1, expires_at = $3`,
+        'INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)',
         [token, userId, expiresAt]
     )
 
