@@ -1,10 +1,33 @@
+import { z } from 'zod'
+
+export const AgencyImportSchema = z.object({
+    agency_name: z.string().min(1, 'Nombre de agencia requerido'),
+    branch_name: z.string().optional().default('Principal'),
+    email: z.string().email('Email inválido'),
+    contact_name: z.string().optional().or(z.literal('')),
+    phone: z.string().optional().or(z.literal('')),
+    country: z.string().optional().or(z.literal('')),
+    state: z.string().optional().or(z.literal('')),
+    city: z.string().optional().or(z.literal('')),
+    instagram_url: z.string().url('URL inválida').optional().or(z.literal('')),
+    tiktok_url: z.string().url('URL inválida').optional().or(z.literal('')),
+    website_url: z.string().url('URL inválida').optional().or(z.literal('')),
+    contact_status: z.enum(['not_contacted', 'contacted', 'waiting_response', 'rejected', 'interested']).optional().default('not_contacted'),
+    lead_temperature: z.enum(['cold', 'warm', 'hot']).optional().default('cold'),
+    relationship_type: z.enum(['lead', 'client']).optional().default('lead'),
+    notes: z.string().optional().or(z.literal(''))
+})
+
+export type AgencyImportInput = z.infer<typeof AgencyImportSchema>
+
+// Keep existing parsing logic but update validation to use Zod
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { Branch, ContactStatus, LeadTemperature, RelationshipType } from '@/types/database'
+import { ContactStatus, LeadTemperature, RelationshipType } from '@/types/database'
 
 export interface ImportRow {
     agency_name: string
-    branch_name?: string
+    branch_name: string
     contact_name?: string
     email: string
     phone?: string
@@ -14,9 +37,9 @@ export interface ImportRow {
     instagram_url?: string
     tiktok_url?: string
     website_url?: string
-    contact_status?: ContactStatus
-    lead_temperature?: LeadTemperature
-    relationship_type?: RelationshipType
+    contact_status: ContactStatus
+    lead_temperature: LeadTemperature
+    relationship_type: RelationshipType
     notes?: string
 }
 
@@ -65,36 +88,35 @@ export function validateAndNormalize(data: any[]): ImportResult {
     const seenAgencyBranches = new Set<string>()
 
     data.forEach((row, index) => {
-        const errors: string[] = []
-
         // Normalization
-        const normalized: ImportRow = {
-            agency_name: row.agency_name || row.Agencia || '',
-            branch_name: row.branch_name || row.Sucursal || 'Principal',
-            email: row.email || row.Email || '',
-            contact_name: row.contact_name || row.Contacto,
-            phone: row.phone || row.Telefono || row.Teléfono,
-            country: row.country || row.Pais || row.País,
-            state: row.state || row.Provincia || row.Estado,
-            city: row.city || row.Ciudad,
-            instagram_url: row.instagram_url || row.Instagram,
-            tiktok_url: row.tiktok_url || row.TikTok,
-            website_url: row.website_url || row.Web,
-            contact_status: (row.contact_status || 'not_contacted') as ContactStatus,
-            lead_temperature: (row.lead_temperature || 'cold') as LeadTemperature,
-            relationship_type: (row.relationship_type || 'lead') as RelationshipType,
-            notes: row.notes || row.Notas,
+        const raw: any = {
+            agency_name: row["Agency Name"] || row.agency_name || row.Agencia || '',
+            branch_name: row["Branch Name"] || row.branch_name || row.Sucursal || 'Principal',
+            email: row["Email"] || row.email || row.Email || '',
+            contact_name: row["Contact Name"] || row.contact_name || row.Contacto || '',
+            phone: row["Phone"] || row.phone || row.Telefono || row.Teléfono || '',
+            country: row["Country"] || row.country || row.Pais || row.País || '',
+            state: row["State"] || row.state || row.Provincia || row.Estado || '',
+            city: row["City"] || row.city || row.Ciudad || '',
+            instagram_url: row["Instagram"] || row.instagram_url || row.Instagram || '',
+            tiktok_url: row["TikTok"] || row.tiktok_url || row.TikTok || '',
+            website_url: row["Website"] || row.website_url || row.Web || '',
+            contact_status: (row["Contact Status"] || row.contact_status || 'not_contacted'),
+            lead_temperature: (row["Temperature"] || row.lead_temperature || 'cold'),
+            relationship_type: (row["Relationship"] || row.relationship_type || 'lead'),
+            notes: row["Initial Note"] || row.notes || row.Notas || '',
         }
 
-        // Validation
-        if (!normalized.agency_name) errors.push('Nombre de agencia requerido')
-        if (!normalized.email) errors.push('Email requerido')
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.email)) errors.push('Email inválido')
+        // Zod Validation
+        const safeParse = AgencyImportSchema.safeParse(raw)
 
-        if (errors.length > 0) {
+        if (!safeParse.success) {
+            const errors = safeParse.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
             result.invalid.push({ row, errors })
             return
         }
+
+        const normalized = safeParse.data as ImportRow;
 
         // Duplicate Detection (Local to file)
         const emailKey = normalized.email.toLowerCase()

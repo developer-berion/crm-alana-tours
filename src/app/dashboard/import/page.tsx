@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { parseFile, validateAndNormalize, ImportRow, ImportResult } from '@/utils/importService'
-import { supabase } from '@/lib/supabase'
+import { generateTemplate } from '@/utils/templateGenerator'
+import { importAgencies } from '@/app/actions/importActions'
 import {
     Upload, FileText, CheckCircle2,
     AlertCircle, AlertTriangle,
-    Loader2, ChevronRight, X
+    Loader2, ChevronRight, X, Download
 } from 'lucide-react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -20,7 +21,7 @@ export default function ImportPage() {
     const [result, setResult] = useState<ImportResult | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
-    const [importStatus, setImportStatus] = useState<{ current: number; total: number } | null>(null)
+    const [importSummary, setImportSummary] = useState<{ total: number; imported: number; duplicates: number; errors: number } | null>(null)
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0]
@@ -28,6 +29,7 @@ export default function ImportPage() {
 
         setIsLoading(true)
         setFile(selectedFile)
+        setImportSummary(null)
         try {
             const data = await parseFile(selectedFile)
             const validationResult = validateAndNormalize(data)
@@ -43,101 +45,65 @@ export default function ImportPage() {
     const handleImport = async () => {
         if (!result || result.valid.length === 0) return
         setIsImporting(true)
-        const total = result.valid.length
 
-        let successCount = 0
-        const { data: { user } } = await supabase.auth.getUser()
+        try {
+            // Call Server Action
+            // Using a system ID for now as Supabase auth is removed/migrating
+            const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-        for (let i = 0; i < total; i++) {
-            setImportStatus({ current: i + 1, total })
-            const row = result.valid[i]
+            const response = await importAgencies(result.valid, SYSTEM_USER_ID)
 
-            try {
-                // 1. Find or create agency
-                let agencyId: string
-                const { data: existingAgency } = await supabase
-                    .from('agencies')
-                    .select('id')
-                    .eq('name', row.agency_name)
-                    .single()
-
-                if (existingAgency) {
-                    agencyId = existingAgency.id
+            if (response.success) {
+                setImportSummary(response.summary)
+                setResult(null)
+                setFile(null)
+                if (response.summary.errors > 0 || response.summary.duplicates > 0) {
+                    alert(`Importación completada con observaciones.\nImportados: ${response.summary.imported}\nDuplicados: ${response.summary.duplicates}\nErrores: ${response.summary.errors}`)
                 } else {
-                    const { data: newAgency } = await supabase
-                        .from('agencies')
-                        .insert({ name: row.agency_name })
-                        .select()
-                        .single()
-                    agencyId = newAgency!.id
+                    alert(`¡Éxito! Se han importado ${response.summary.imported} agencias correctamente.`)
                 }
-
-                // 2. Insert Branch
-                const { data: branch, error: branchError } = await supabase
-                    .from('branches')
-                    .insert({
-                        agency_id: agencyId,
-                        branch_name: row.branch_name,
-                        contact_name: row.contact_name,
-                        email: row.email,
-                        phone: row.phone,
-                        country: row.country,
-                        state: row.state,
-                        city: row.city,
-                        instagram_url: row.instagram_url,
-                        tiktok_url: row.tiktok_url,
-                        website_url: row.website_url,
-                        contact_status: row.contact_status,
-                        lead_temperature: row.lead_temperature,
-                        relationship_type: row.relationship_type,
-                        notes: row.notes
-                    })
-                    .select()
-                    .single()
-
-                if (!branchError && branch && user) {
-                    successCount++
-                    // Log audit
-                    await supabase.from('agency_activity_log').insert({
-                        branch_id: branch.id,
-                        user_id: user.id,
-                        action_type: 'bulk_import',
-                        new_value: 'Importado masivamente'
-                    })
-                }
-            } catch (err) {
-                console.error('Error importing row', i, err)
+            } else {
+                alert(`Error en la importación: ${response.details?.join(', ') || 'Error desconocido'}`)
             }
-        }
 
-        // Final log
-        if (user) {
-            await supabase.from('import_logs').insert({
-                file_name: file?.name || 'unknown',
-                uploaded_by: user.id,
-                total_rows: (result.valid.length + result.duplicates.length + result.invalid.length),
-                valid_rows: successCount,
-                duplicate_rows: result.duplicates.length,
-                invalid_rows: result.invalid.length
-            })
+        } catch (err) {
+            console.error('Error calling server action', err)
+            alert('Error crítico de conexión al importar.')
+        } finally {
+            setIsImporting(false)
         }
-
-        setIsImporting(false)
-        setImportStatus(null)
-        alert(`Importación finalizada. ${successCount} registros creados.`)
-        setResult(null)
-        setFile(null)
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Importación Masiva</h1>
-                <p className="text-gray-600">Sube archivos .csv o .xlsx para cargar múltiples agencias</p>
+        <div className="w-full max-w-full overflow-x-hidden space-y-8 px-4 md:px-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Importación Masiva</h1>
+                    <p className="text-gray-600">Sube archivos .csv o .xlsx para cargar múltiples agencias</p>
+                </div>
+                <div className="flex gap-2 relative z-10">
+                    <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); generateTemplate('csv'); }}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                    >
+                        <FileText className="h-4 w-4" /> Plantilla CSV
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); generateTemplate('xlsx'); }}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                    >
+                        <FileText className="h-4 w-4" /> Plantilla Excel
+                    </button>
+                </div>
             </div>
 
-            {!result && (
-                <div className="bg-white p-12 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center space-y-4">
+            {!result && !importSummary && (
+                <div
+                    className="relative bg-white p-12 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center space-y-4 hover:border-primary/50 transition-colors z-0"
+                    style={{ position: 'relative' }}
+                >
                     <div className="p-4 rounded-full bg-primary/10 text-primary">
                         <Upload className="h-10 w-10" />
                     </div>
@@ -149,10 +115,43 @@ export default function ImportPage() {
                         type="file"
                         accept=".csv,.xlsx"
                         onChange={handleFileChange}
-                        className="absolute opacity-0 cursor-pointer w-full h-full max-h-64 mt-[-150px]"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                         disabled={isLoading}
                     />
                     {isLoading && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+                </div>
+            )}
+
+            {importSummary && (
+                <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center">
+                    <div className="inline-flex p-4 rounded-full bg-success/10 text-success mb-4">
+                        <CheckCircle2 className="h-12 w-12" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Proceso Finalizado</h2>
+                    <p className="text-gray-600 mb-6">Resumen de la operación:</p>
+
+                    <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto">
+                        <div className="p-4 bg-gray-50 rounded-xl">
+                            <p className="text-sm font-bold text-gray-500 uppercase">Importados</p>
+                            <p className="text-2xl font-bold text-success">{importSummary.imported}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-xl">
+                            <p className="text-sm font-bold text-gray-500 uppercase">Duplicados</p>
+                            <p className="text-2xl font-bold text-accent">{importSummary.duplicates}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-xl">
+                            <p className="text-sm font-bold text-gray-500 uppercase">Errores</p>
+                            <p className="text-2xl font-bold text-error">{importSummary.errors}</p>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => setImportSummary(null)}
+                        className="mt-8 px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors"
+                    >
+                        Subir otro archivo
+                    </button>
                 </div>
             )}
 
@@ -173,7 +172,7 @@ export default function ImportPage() {
                                 <AlertTriangle className="h-6 w-6" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold text-gray-400 uppercase">Duplicados</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase">Duplicados (Archivo)</p>
                                 <p className="text-2xl font-bold text-gray-900">{result.duplicates.length}</p>
                             </div>
                         </div>
@@ -192,7 +191,7 @@ export default function ImportPage() {
                         <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                             <h2 className="font-bold text-gray-900">Vista Previa (Primeros 10 válidos)</h2>
                             <div className="flex gap-2">
-                                <button onClick={() => setResult(null)} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Cancelar</button>
+                                <button onClick={() => { setResult(null); setFile(null); }} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Cancelar</button>
                                 <button
                                     onClick={handleImport}
                                     disabled={isImporting || result.valid.length === 0}
@@ -201,7 +200,7 @@ export default function ImportPage() {
                                     {isImporting ? (
                                         <div className="flex items-center gap-2">
                                             <Loader2 className="h-4 w-4 animate-spin" />
-                                            {importStatus ? `${importStatus.current}/${importStatus.total}` : 'Importando...'}
+                                            Importando...
                                         </div>
                                     ) : 'Comenzar Importación'}
                                 </button>

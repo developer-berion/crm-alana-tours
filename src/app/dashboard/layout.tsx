@@ -130,7 +130,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 md:pl-64 flex flex-col min-w-0">
+            <main className="flex-1 md:pl-64 flex flex-col min-w-0 overflow-x-hidden">
                 <header className="md:hidden h-16 bg-white shadow-sm flex items-center px-4 sticky top-0 z-40">
                     <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-gray-600">
                         <Menu className="h-6 w-6" />
