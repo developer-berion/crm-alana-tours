@@ -1,60 +1,39 @@
-\# Authentication \& Security
+# Authentication & Security
 
+## User Model
 
+- 3 users only
+- All users are superadmin
+- Created manually via Supabase Dashboard
 
-\## User Model
+## Auth Provider
 
-\- 3 users only
+- Supabase Auth (email/password)
+- Client: `@supabase/supabase-js`
 
-\- All users are superadmin
+## Password Recovery Flow
 
-\- Created manually via Supabase
+- User submits email
+- Supabase Edge Function is called
+- Function:
+  - Generates secure random password
+  - Updates password via Supabase Admin API
+  - Sends email via Hostinger SMTP
+- UI shows confirmation message only
 
+## Password Rules
 
+- Minimum 12 characters
+- Uppercase, lowercase, number, special character
+- Random generation only
 
-\## Auth Provider
+## Security Rules
 
-\- Supabase Auth (email/password)
+- No passwords handled in frontend
+- No service_role exposed to frontend
+- Database access via API Routes only (server-side)
+- Audit logs are read-only
 
+## Note on Architecture
 
-
-\## Password Recovery Flow
-
-\- User submits email
-
-\- Supabase Edge Function is called
-
-\- Function:
-
-&nbsp; - Generates secure random password
-
-&nbsp; - Updates password via Supabase Admin API
-
-&nbsp; - Sends email via Hostinger SMTP
-
-\- UI shows confirmation message only
-
-
-
-\## Password Rules
-
-\- Minimum 12 characters
-
-\- Uppercase, lowercase, number, special character
-
-\- Random generation only
-
-
-
-\## Security Rules
-
-\- No passwords handled in frontend
-
-\- No service\_role exposed
-
-\- RLS enabled on all tables
-
-\- Audit logs are read-only
-
-
-
+Authentication uses Supabase Auth, while data storage uses Google Cloud SQL (PostgreSQL). This hybrid approach was adopted during migration to Google Cloud infrastructure.

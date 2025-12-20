@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { X, Building2, User, Globe2, MapPin, Loader2, Check, Plus, Trash2, Mail } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { countries, statesByCountry, Country } from '@/utils/locationData'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -42,12 +41,10 @@ export default function AddBranchModal({ isOpen, onClose, onSuccess, agencyId, a
         setLoading(true)
 
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) throw new Error('No estás autenticado')
-
-            const { data: branch, error: branchError } = await supabase
-                .from('branches')
-                .insert({
+            const res = await fetch('/api/branches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     agency_id: agencyId,
                     branch_name: formData.branchName,
                     contact_name: formData.contactName,
@@ -60,18 +57,12 @@ export default function AddBranchModal({ isOpen, onClose, onSuccess, agencyId, a
                     lead_temperature: formData.leadTemperature,
                     relationship_type: formData.relationshipType
                 })
-                .select()
-                .single()
-
-            if (branchError) throw branchError
-
-            // Log Activity
-            await supabase.from('agency_activity_log').insert({
-                branch_id: branch.id,
-                user_id: user.id,
-                action_type: 'create',
-                new_value: `Sucursal creada: ${formData.branchName} para agencia ${agencyName}`
             })
+
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Error creando sucursal')
+            }
 
             onSuccess()
             onClose()

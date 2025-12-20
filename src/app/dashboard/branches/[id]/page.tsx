@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, use } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Branch, Agency, AgencyNote, ActivityLog } from '@/types/database'
 import {
     ArrowLeft, Loader2, MapPin,
@@ -33,32 +32,21 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
 
     useEffect(() => {
         async function fetchData() {
-            const { data: branchData } = await supabase.from('branches').select('*').eq('id', id).single()
-            if (branchData) {
-                setBranch(branchData)
-                const [agencyRes, notesRes, logsRes] = await Promise.all([
-                    supabase.from('agencies').select('*').eq('id', branchData.agency_id).single(),
-                    supabase.from('agency_notes').select('*').eq('branch_id', id).order('created_at', { ascending: false }),
-                    supabase.from('agency_activity_log').select('*').eq('branch_id', id).order('created_at', { ascending: false }).limit(5)
-                ])
-                setAgency(agencyRes.data)
-                setNotes(notesRes.data || [])
-                setLogs(logsRes.data || [])
-                setPhoneList(branchData.phone ? branchData.phone.split(',').map((p: string) => p.trim()) : [])
-
-                // Fetch authors for notes and logs
-                const userIds = new Set<string>()
-                notesRes.data?.forEach(n => userIds.add(n.created_by))
-                logsRes.data?.forEach(l => userIds.add(l.user_id))
-
-                if (userIds.size > 0) {
-                    const { data: profiles } = await supabase.from('profiles').select('id, name, email').in('id', Array.from(userIds))
-                    if (profiles) {
-                        const authorMap: Record<string, { name: string, email: string }> = {}
-                        profiles.forEach(p => authorMap[p.id] = p)
-                        setAuthors(authorMap)
+            try {
+                const res = await fetch(`/api/branches/${id}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setBranch(data.branch)
+                    setAgency(data.agency)
+                    setNotes(data.notes || [])
+                    setLogs(data.activity || [])
+                    setPhoneList(data.branch?.phone ? data.branch.phone.split(',').map((p: string) => p.trim()) : [])
+                    if (data.usersMap) {
+                        setAuthors(data.usersMap)
                     }
                 }
+            } catch (error) {
+                console.error('Error fetching branch:', error)
             }
             setLoading(false)
         }
@@ -70,38 +58,27 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
         setIsSaving(true)
 
         const oldValue = branch[field]
-        const { error } = await supabase.from('branches').update({ [field]: value }).eq('id', id)
-
-        if (!error) {
-            setBranch({ ...branch, [field]: value })
-
-            // Log activity
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                await supabase.from('agency_activity_log').insert({
-                    branch_id: id,
-                    user_id: user.id,
-                    action_type: 'update',
-                    field_name: field,
-                    old_value: String(oldValue),
-                    new_value: String(value)
-                })
-
-                // Refresh logs
-                const { data: newLogs } = await supabase.from('agency_activity_log')
-                    .select('*').eq('branch_id', id).order('created_at', { ascending: false }).limit(5)
-                setLogs(newLogs || [])
-            }
-        } else {
-            console.error(`Error updating field ${field}:`, {
-                message: (error as any).message,
-                code: (error as any).code,
-                details: (error as any).details,
-                hint: (error as any).hint
+        try {
+            const res = await fetch(`/api/branches/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field, value, oldValue: String(oldValue) })
             })
-            alert(`Error al guardar: ${(error as any).message || 'Error desconocido'}`)
-            // Revert value in local state
-            setBranch({ ...branch })
+
+            if (res.ok) {
+                const data = await res.json()
+                setBranch({ ...branch, [field]: value })
+                if (data.activity) {
+                    setLogs(data.activity)
+                }
+            } else {
+                const err = await res.json()
+                console.error(`Error updating field ${field}:`, err)
+                alert(`Error al guardar: ${err.error || 'Error desconocido'}`)
+            }
+        } catch (error) {
+            console.error(`Error updating field ${field}:`, error)
+            alert('Error de conexión')
         }
         setIsSaving(false)
     }
@@ -110,39 +87,28 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
         if (!newNote.trim() || !branch) return
         setIsSaving(true)
 
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-            const { data: noteData, error } = await supabase.from('agency_notes').insert({
-                branch_id: id,
-                content: newNote,
-                created_by: user.id
-            }).select().single()
+        try {
+            const res = await fetch(`/api/branches/${id}/notes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: newNote })
+            })
 
-            if (!error && noteData) {
-                setNotes([noteData, ...notes])
-                setNewNote('')
-
-                // Add current user to authors if not present
-                if (!authors[user.id]) {
-                    const { data: profile } = await supabase.from('profiles').select('name, email').eq('id', user.id).single()
-                    if (profile) {
-                        setAuthors(prev => ({ ...prev, [user.id]: { name: profile.name, email: profile.email } }))
+            if (res.ok) {
+                const { data: noteData } = await res.json()
+                if (noteData) {
+                    setNotes([noteData, ...notes])
+                    setNewNote('')
+                    // Refresh activity logs
+                    const activityRes = await fetch(`/api/branches/${id}/activity`)
+                    if (activityRes.ok) {
+                        const { data: newLogs } = await activityRes.json()
+                        setLogs(newLogs || [])
                     }
                 }
-
-                // Log activity
-                await supabase.from('agency_activity_log').insert({
-                    branch_id: id,
-                    user_id: user.id,
-                    action_type: 'add_note',
-                    new_value: 'Nota añadida'
-                })
-
-                // Refresh logs
-                const { data: newLogs } = await supabase.from('agency_activity_log')
-                    .select('*').eq('branch_id', id).order('created_at', { ascending: false }).limit(5)
-                setLogs(newLogs || [])
             }
+        } catch (error) {
+            console.error('Error adding note:', error)
         }
         setIsSaving(false)
     }
@@ -151,27 +117,38 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
         if (!editingNoteContent.trim()) return
         setIsSaving(true)
 
-        const { error } = await supabase.from('agency_notes').update({
-            content: editingNoteContent,
-            updated_at: new Date().toISOString()
-        }).eq('id', noteId)
+        try {
+            const res = await fetch(`/api/branches/${id}/notes`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ noteId, content: editingNoteContent })
+            })
 
-        if (!error) {
-            setNotes(notes.map(n => n.id === noteId ? { ...n, content: editingNoteContent, updated_at: new Date().toISOString() } : n))
-            setEditingNoteId(null)
-            setEditingNoteContent('')
+            if (res.ok) {
+                setNotes(notes.map(n => n.id === noteId ? { ...n, content: editingNoteContent, updated_at: new Date().toISOString() } : n))
+                setEditingNoteId(null)
+                setEditingNoteContent('')
+            }
+        } catch (error) {
+            console.error('Error updating note:', error)
         }
         setIsSaving(false)
     }
 
     const handleArchiveNote = async (noteId: string, archive: boolean) => {
         setIsSaving(true)
-        const { error } = await supabase.from('agency_notes').update({
-            archived: archive
-        }).eq('id', noteId)
+        try {
+            const res = await fetch(`/api/branches/${id}/notes`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ noteId, isPinned: !archive })
+            })
 
-        if (!error) {
-            setNotes(notes.map(n => n.id === noteId ? { ...n, archived: archive } : n))
+            if (res.ok) {
+                setNotes(notes.map(n => n.id === noteId ? { ...n, archived: archive } : n))
+            }
+        } catch (error) {
+            console.error('Error archiving note:', error)
         }
         setIsSaving(false)
     }

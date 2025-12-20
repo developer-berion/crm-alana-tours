@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { X, Building2, User, Globe2, MapPin, Loader2, Check, Plus, Trash2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { countries, statesByCountry, Country } from '@/utils/locationData'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -36,22 +35,25 @@ export default function AddAgencyModal({ isOpen, onClose, onSuccess }: AddAgency
         setLoading(true)
 
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) throw new Error('No estás autenticado')
-
             // 1. Create Agency
-            const { data: agency, error: agencyError } = await supabase
-                .from('agencies')
-                .insert({ name: formData.agencyName })
-                .select()
-                .single()
+            const agencyRes = await fetch('/api/agencies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: formData.agencyName })
+            })
 
-            if (agencyError) throw agencyError
+            if (!agencyRes.ok) {
+                const err = await agencyRes.json()
+                throw new Error(err.error || 'Error creando agencia')
+            }
+
+            const { data: agency } = await agencyRes.json()
 
             // 2. Create Initial Branch
-            const { data: branch, error: branchError } = await supabase
-                .from('branches')
-                .insert({
+            const branchRes = await fetch('/api/branches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     agency_id: agency.id,
                     branch_name: 'Principal',
                     contact_name: formData.representative,
@@ -64,18 +66,12 @@ export default function AddAgencyModal({ isOpen, onClose, onSuccess }: AddAgency
                     lead_temperature: 'cold',
                     relationship_type: 'lead'
                 })
-                .select()
-                .single()
-
-            if (branchError) throw branchError
-
-            // 3. Log Activity
-            await supabase.from('agency_activity_log').insert({
-                branch_id: branch.id,
-                user_id: user.id,
-                action_type: 'create',
-                new_value: `Agencia creada: ${formData.agencyName}`
             })
+
+            if (!branchRes.ok) {
+                const err = await branchRes.json()
+                throw new Error(err.error || 'Error creando sucursal')
+            }
 
             onSuccess()
             onClose()

@@ -48,7 +48,7 @@ export default function ImportPage() {
 
         try {
             // Call Server Action
-            // Using a system ID for now as Supabase auth is removed/migrating
+            // Using a system ID for import operations
             const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
 
             const response = await importAgencies(result.valid, SYSTEM_USER_ID)

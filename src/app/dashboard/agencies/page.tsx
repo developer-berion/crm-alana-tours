@@ -1,11 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Plus, Search } from 'lucide-react'
 import AddAgencyModal from './AddAgencyModal'
 import AgenciesTable, { AgencyWithBranches } from '@/components/agencies/AgenciesTable'
-import { Agency } from '@/types/database'
 
 export default function AgenciesPage() {
     const [agencies, setAgencies] = useState<AgencyWithBranches[]>([])
@@ -16,44 +14,21 @@ export default function AgenciesPage() {
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
     const [isModalOpen, setIsModalOpen] = useState(false)
 
-    // Placeholder for edit functionality if we want to reuse the modal or just navigate
-    // For now, onEdit will just open the detail page or we could open a modal if the modal supported editing.
-    // The requirement says "Edit button goes to edit screen/modal (use existing pattern)".
-    // The existing pattern seems to be just the AddAgencyModal. 
-    // Since there is no "EditAgencyModal" evident yet, and scope says "only refactor list page",
-    // I will assume for now we might leave it as a placeholder or navigate to detail.
-    // However, the requirement says "Edit button".
-    // I'll leave the onEdit as a stub that maybe logs or alerts for now, OR better, connects to a hypothetical edit flow.
-    // Re-reading: "Actions: 'Editar' button... Edit button goes to edit screen/modal (use existing pattern)."
-    // Since I don't see an explicit Edit screen in the file list, I'll direct it to the Detail page which has "Gestionar" or similar, 
-    // OR I will simply log it for now if I can't find an edit route.
-    // Actually, usually in these CRMs, the detail page IS the edit place or has the edit button.
-    // But the requirements explicitly asked for an Edit button in the row.
-    // I will making the Edit button open the AddAgencyModal in "Edit Mode" if possible, but the modal doesn't seem to support it yet.
-    // To be safe and strictly follow "Do not new features", I will make the Edit button navigate to the detail page for now, 
-    // or if I can, I'll quickly check if `AddAgencyModal` has edit props.
-    // Checking `AddAgencyModal` content from step 22... it does NOT have initialData prop.
-    // So I cannot easily use it for editing without refactoring it.
-    // I will make the Edit button navigate to the agency detail page as a fallback, 
-    // or maybe the user meant the "Branch" edit?
-    // Let's just make it navigate to the detail page for now `dashboard/agencies/[id]`.
-
-    // WAIT, actually I can just pass the ID to the route if there's an edit page.
-    // But there isn't one visible.
-    // I'll make it go to `/dashboard/agencies/[id]` which is the detail page.
-
     const fetchAgencies = async () => {
         setLoading(true)
-        const { data, error } = await supabase
-            .from('agencies')
-            .select('*, branches(*)')
-            // Initial fetch order, though we will sort fully on client side
-            .order('name', { ascending: true })
-
-        if (error) {
+        try {
+            const res = await fetch('/api/agencies')
+            if (res.ok) {
+                const { data } = await res.json()
+                // Transform data to match expected structure
+                const transformed = data.map((a: any) => ({
+                    ...a,
+                    branches: a.branches || []
+                }))
+                setAgencies(transformed)
+            }
+        } catch (error) {
             console.error('Error fetching agencies:', error)
-        } else {
-            setAgencies(data as AgencyWithBranches[] || [])
         }
         setLoading(false)
     }
@@ -80,21 +55,17 @@ export default function AgenciesPage() {
 
         // 3. Search (Name OR Branch details)
         if (searchLower) {
-            // Check Agency Name
             if (a.name.toLowerCase().includes(searchLower)) return true
-
-            // Check Branch Details
             if (primaryBranch) {
                 if (primaryBranch.contact_name?.toLowerCase().includes(searchLower)) return true
                 if (primaryBranch.email?.toLowerCase().includes(searchLower)) return true
                 if (primaryBranch.contact_status?.toLowerCase().includes(searchLower)) return true
             }
-            return false // If search is active and no match found
+            return false
         }
 
         return true
     }).sort((a, b) => {
-        // 4. Sorting by Date
         const dateA = new Date(a.created_at || 0).getTime()
         const dateB = new Date(b.created_at || 0).getTime()
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
@@ -138,7 +109,6 @@ export default function AgenciesPage() {
 
                 {/* Filter Controls Group */}
                 <div className="flex flex-wrap gap-2 md:flex-nowrap">
-                    {/* Status Filter */}
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -152,7 +122,6 @@ export default function AgenciesPage() {
                         <option value="interested">Interesado</option>
                     </select>
 
-                    {/* Temp Filter */}
                     <select
                         value={tempFilter}
                         onChange={(e) => setTempFilter(e.target.value)}
@@ -164,7 +133,6 @@ export default function AgenciesPage() {
                         <option value="hot">Caliente</option>
                     </select>
 
-                    {/* Date Sort */}
                     <select
                         value={sortOrder}
                         onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
@@ -184,4 +152,3 @@ export default function AgenciesPage() {
         </div>
     )
 }
-

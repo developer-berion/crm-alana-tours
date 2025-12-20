@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -33,17 +32,16 @@ export default function ForgotPasswordPage() {
         setError(null)
 
         try {
-            // According to requirements, this calls an Edge Function
-            const { error } = await supabase.functions.invoke('password-recovery', {
-                body: { email: data.email },
+            await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: data.email }),
             })
 
-            // Requirement: "If the email exists, we sent a new password."
-            // We show success even if the email doesn't exist for security.
+            // Always show success to prevent email enumeration
             setIsSent(true)
         } catch (err) {
             console.error(err)
-            // Even on error, we might want to show the generic message
             setIsSent(true)
         } finally {
             setIsLoading(false)

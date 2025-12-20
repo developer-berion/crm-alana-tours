@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, use } from 'react'
-import { supabase } from '@/lib/supabase'
 import { Agency, Branch } from '@/types/database'
 import { Building2, Plus, ArrowLeft, Loader2, MapPin, Phone, Mail, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
@@ -17,13 +16,16 @@ export default function AgencyDetailsPage({ params }: { params: Promise<{ id: st
     const router = useRouter()
 
     const fetchData = async () => {
-        const [agencyRes, branchesRes] = await Promise.all([
-            supabase.from('agencies').select('*').eq('id', id).single(),
-            supabase.from('branches').select('*').eq('agency_id', id).order('branch_name', { ascending: true })
-        ])
-
-        setAgency(agencyRes.data)
-        setBranches(branchesRes.data || [])
+        try {
+            const res = await fetch(`/api/agencies/${id}`)
+            if (res.ok) {
+                const data = await res.json()
+                setAgency(data.agency)
+                setBranches(data.branches || [])
+            }
+        } catch (error) {
+            console.error('Error fetching agency:', error)
+        }
         setLoading(false)
     }
 

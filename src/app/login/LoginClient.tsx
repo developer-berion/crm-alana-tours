@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -54,16 +53,28 @@ export default function LoginClient() {
             localStorage.removeItem('saved_email')
         }
 
-        const { error } = await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: data.password,
-        })
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: data.email,
+                    password: data.password,
+                }),
+            })
 
-        if (error) {
-            setError('Email o contraseña incorrectos.')
+            const result = await res.json()
+
+            if (!res.ok) {
+                setError(result.error || 'Email o contraseña incorrectos.')
+                setIsLoading(false)
+            } else {
+                localStorage.setItem('last_activity', Date.now().toString())
+                router.push('/dashboard')
+            }
+        } catch (err) {
+            setError('Error de conexión. Intenta de nuevo.')
             setIsLoading(false)
-        } else {
-            router.push('/dashboard')
         }
     }
 
@@ -88,6 +99,7 @@ export default function LoginClient() {
                         <input
                             {...register('email')}
                             type="email"
+                            suppressHydrationWarning
                             className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                         {errors.email && (
@@ -100,6 +112,7 @@ export default function LoginClient() {
                         <input
                             {...register('password')}
                             type="password"
+                            suppressHydrationWarning
                             className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                         {errors.password && (

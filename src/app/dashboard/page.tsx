@@ -3,8 +3,6 @@
 import { useAuth } from '@/hooks/useAuth'
 import { Building2, Users, ArrowUpRight, History } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Agency, Branch } from '@/types/database'
 
 export default function DashboardPage() {
     const [stats, setStats] = useState({
@@ -16,17 +14,20 @@ export default function DashboardPage() {
 
     useEffect(() => {
         async function fetchStats() {
-            const { count: agencyCount } = await supabase.from('agencies').select('*', { count: 'exact', head: true })
-            const { count: branchCount } = await supabase.from('branches').select('*', { count: 'exact', head: true })
-            const { count: leadCount } = await supabase.from('branches').select('*', { count: 'exact', head: true }).eq('relationship_type', 'lead')
-            const { count: clientCount } = await supabase.from('branches').select('*', { count: 'exact', head: true }).eq('relationship_type', 'client')
-
-            setStats({
-                agencies: agencyCount || 0,
-                branches: branchCount || 0,
-                leads: leadCount || 0,
-                clients: clientCount || 0
-            })
+            try {
+                const res = await fetch('/api/stats')
+                if (res.ok) {
+                    const data = await res.json()
+                    setStats({
+                        agencies: data.agencies || 0,
+                        branches: data.branches || 0,
+                        leads: data.leads || 0,
+                        clients: data.clients || 0
+                    })
+                }
+            } catch (err) {
+                console.error('Error fetching stats:', err)
+            }
         }
         fetchStats()
     }, [])

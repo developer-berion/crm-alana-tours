@@ -14,7 +14,6 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -39,20 +38,13 @@ export default function DashboardLayout({
     }, [user, loading, router])
 
     const handleLogout = async () => {
-        await supabase.auth.signOut()
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' })
+        } catch (e) {
+            console.error('Logout error:', e)
+        }
         router.push('/login')
     }
-
-    /* 
-    if (loading) {
-        console.log('[DashboardLayout] Rendering spinner')
-        return (
-            <div className="flex h-screen items-center justify-center bg-background">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-            </div>
-        )
-    }
-    */
 
     const navItems = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
