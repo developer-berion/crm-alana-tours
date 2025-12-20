@@ -88,7 +88,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_branches_agency_id ON branches(agency_id);
 CREATE INDEX IF NOT EXISTS idx_notes_branch_id ON agency_notes(branch_id);
 CREATE INDEX IF NOT EXISTS idx_activity_branch_id ON agency_activity_log(branch_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+DROP INDEX IF EXISTS idx_sessions_user_id;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 
 -- ============================================================
 -- PASO 3: Crear usuario de prueba
