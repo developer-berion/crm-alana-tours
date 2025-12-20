@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local cleanup
+/scripts/
+/migrate/
+*.txt
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!next-env.d.ts
+!next.config.ts
+!.github/**/*.yml
+!.github/**/*.json
+
