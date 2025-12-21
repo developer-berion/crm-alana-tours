@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased] - 2025-12-21
+### Added
+- **Command Center Dashboard**: Complete transformation of the dashboard into an analytical command center.
+- **Venezuela Map**: Interactive vector map with analytical legend showing agency density by state.
+- **Visual Charts**: Funnel, Temperature (Donut), and Digital Presence (Radar) charts using `recharts`.
+- **Backend**: Optimized `/api/stats` endpoint with parallel processing for dashboard metrics.
+- **UX**: Vertical scrolling enabled for dashboard content.
+
+
+
 ## [Unreleased] - 2025-12-19
 
 ### Added

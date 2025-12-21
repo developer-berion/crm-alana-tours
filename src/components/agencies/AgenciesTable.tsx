@@ -7,7 +7,7 @@ import { Plus, ArrowUp, ArrowDown } from 'lucide-react'
 import { z } from 'zod'
 import SocialsCell from './SocialsCell'
 import EditPopoverCell from '../ui/EditPopoverCell'
-import AddBranchModal from './AddBranchModal'
+import AddBranchModal from '@/components/agencies/AddBranchModal'
 
 interface AgenciesTableProps {
     agencies: FlatAgencyBranchRow[]
