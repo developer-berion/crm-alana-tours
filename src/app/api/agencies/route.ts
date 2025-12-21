@@ -49,10 +49,10 @@ export async function GET(request: Request) {
             ORDER BY a.created_at DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `
-        
+
         const result = await pool.query(query, [...params, limit, offset])
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             data: result.rows,
             pagination: {
                 total,
@@ -75,11 +75,11 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
-        
+
         const validation = createAgencySchema.safeParse(body)
         if (!validation.success) {
-            return NextResponse.json({ 
-                error: validation.error.errors[0].message 
+            return NextResponse.json({
+                error: validation.error.issues[0]?.message || 'Error de validación'
             }, { status: 400 })
         }
 
