@@ -60,9 +60,9 @@ export async function POST(request: Request) {
             notes,
         } = body
 
-        if (!agency_id || !branch_name || !email) {
+        if (!agency_id || !branch_name) {
             return NextResponse.json(
-                { error: 'agency_id, branch_name y email son requeridos' },
+                { error: 'agency_id y branch_name son requeridos' },
                 { status: 400 }
             )
         }

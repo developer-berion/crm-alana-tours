@@ -17,7 +17,7 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const search = searchParams.get('search') || ''
         const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '50') // Default to 50 items per page
+        const limit = parseInt(searchParams.get('limit') || '50')
         const offset = (page - 1) * limit
 
         let whereClause = ''
@@ -25,28 +25,48 @@ export async function GET(request: Request) {
         let paramIndex = 1
 
         if (search) {
-            whereClause = ` WHERE a.name ILIKE $${paramIndex}`
+            whereClause = ` WHERE a.name ILIKE $${paramIndex} OR b.branch_name ILIKE $${paramIndex} OR b.contact_name ILIKE $${paramIndex} OR b.email ILIKE $${paramIndex}`
             params.push(`%${search}%`)
             paramIndex++
         }
 
-        // Get total count for pagination
-        const countQuery = `SELECT COUNT(DISTINCT a.id) FROM agencies a ${whereClause}`
+        // Get total count (counting ROWS i.e. agency+branch combinations)
+        const countQuery = `
+            SELECT COUNT(*) 
+            FROM agencies a
+            LEFT JOIN branches b ON b.agency_id = a.id
+            ${whereClause ? whereClause + ' AND a.deleted_at IS NULL' : 'WHERE a.deleted_at IS NULL'}
+        `
         const countResult = await pool.query(countQuery, params)
         const total = parseInt(countResult.rows[0].count)
 
-        // Get paginated data
+        // Get paginated flat list
+        // We select key fields from both tables
         let query = `
-            SELECT a.*, 
-                   COUNT(b.id) as branch_count,
-                   MIN(b.contact_status) as contact_status,
-                   MIN(b.lead_temperature) as lead_temperature,
-                   MIN(b.city) as city
+            SELECT 
+                a.id as agency_id,
+                a.name as agency_name,
+                a.created_at,
+                b.id as branch_id,
+                b.branch_name,
+                b.contact_name,
+                b.email,
+                b.phone,
+                b.city,
+                b.country,
+                b.state,
+                b.contact_status,
+                b.lead_temperature,
+                b.relationship_type,
+                b.instagram_url,
+                b.tiktok_url,
+                b.facebook_url,
+                b.website_url,
+                b.notes
             FROM agencies a
             LEFT JOIN branches b ON b.agency_id = a.id
-            ${whereClause}
-            GROUP BY a.id 
-            ORDER BY a.created_at DESC
+            ${whereClause ? whereClause + ' AND a.deleted_at IS NULL' : 'WHERE a.deleted_at IS NULL'}
+            ORDER BY a.name ASC, b.id ASC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { Agency, Branch } from '@/types/database'
-import { Phone, Mail, MapPin, Building2 } from 'lucide-react'
+import { Phone, Mail, MapPin, Building2, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import { AgencyWithBranches } from './AgenciesTable'
@@ -9,6 +9,7 @@ import { AgencyWithBranches } from './AgenciesTable'
 interface AgencyRowProps {
     agency: AgencyWithBranches
     primaryBranch?: Branch
+    onAddBranch?: (agencyId: string, agencyName: string) => void
 }
 
 const statusColors: Record<string, string> = {
@@ -39,7 +40,7 @@ const tempLabels: Record<string, string> = {
     hot: 'Caliente'
 }
 
-export default function AgencyRow({ agency, primaryBranch }: AgencyRowProps) {
+export default function AgencyRow({ agency, primaryBranch, onAddBranch }: AgencyRowProps) {
     const router = useRouter()
 
     // Handle row click to navigate
@@ -63,18 +64,32 @@ export default function AgencyRow({ agency, primaryBranch }: AgencyRowProps) {
             <div className="hidden md:grid grid-cols-12 gap-4 p-4 items-center">
                 {/* Name & Rep */}
                 {/* Name & Rep */}
-                <div className="col-span-4 lg:col-span-3 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                        <Building2 size={18} />
+                <div className="col-span-4 lg:col-span-3 flex items-center justify-between gap-3 group/name">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                            <Building2 size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="font-semibold text-gray-900 truncate">{agency.name}</h3>
+                            {primaryBranch?.contact_name && (
+                                <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+                                    <span className="opacity-70">Rep:</span> {primaryBranch.contact_name}
+                                </p>
+                            )}
+                        </div>
                     </div>
-                    <div className="min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate">{agency.name}</h3>
-                        {primaryBranch?.contact_name && (
-                            <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-                                <span className="opacity-70">Rep:</span> {primaryBranch.contact_name}
-                            </p>
-                        )}
-                    </div>
+                    {onAddBranch && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onAddBranch(agency.id, agency.name);
+                            }}
+                            className="opacity-0 group-hover/name:opacity-100 transition-opacity p-1 hover:bg-blue-50 text-primary rounded"
+                            title="Agregar Sucursal"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    )}
                 </div>
 
                 {/* Contact (Email) */}

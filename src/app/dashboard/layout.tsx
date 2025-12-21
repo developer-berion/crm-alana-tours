@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter, usePathname } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
     LayoutDashboard,
     Building2,
@@ -10,10 +10,11 @@ import {
     LogOut,
     User as UserIcon,
     Menu,
-    X
+    X,
+    PanelLeftClose,
+    PanelLeftOpen
 } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -29,7 +30,9 @@ export default function DashboardLayout({
     const { user, profile, loading } = useAuth()
     const router = useRouter()
     const pathname = usePathname()
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+    // Default collapsed (true) as per requirement
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     useEffect(() => {
         if (!loading && !user) {
@@ -53,12 +56,19 @@ export default function DashboardLayout({
     ]
 
     const SidebarContent = () => (
-        <div className="flex h-full flex-col bg-white shadow-sm transition-all duration-300">
-            <div className="p-6 flex justify-center">
-                <img src="/logo_alana.svg" alt="Alana Tours" className="h-12 w-auto" />
+        <div className="flex h-full flex-col bg-white shadow-sm border-r border-gray-100">
+            <div className="p-6 flex justify-between items-center bg-white z-10">
+                <img src="/logo_alana.svg" alt="Alana Tours" className="h-10 w-auto" />
+                {/* Close for mobile */}
+                <button
+                    className="md:hidden text-gray-500"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                >
+                    <X className="h-6 w-6" />
+                </button>
             </div>
 
-            <nav className="flex-1 px-4 space-y-1">
+            <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href
                     return (
@@ -66,22 +76,22 @@ export default function DashboardLayout({
                             key={item.name}
                             href={item.href}
                             className={cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200",
+                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200",
                                 isActive
-                                    ? "bg-primary text-white"
-                                    : "text-gray-600 hover:bg-gray-100 hover:text-primary"
+                                    ? "bg-primary/10 text-primary" // Premium feel adjustment
+                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                             )}
                         >
-                            <item.icon className="h-5 w-5" />
+                            <item.icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-gray-400")} />
                             {item.name}
                         </Link>
                     )
                 })}
             </nav>
 
-            <div className="p-4 border-t border-gray-100">
+            <div className="p-4 border-t border-gray-100 bg-white z-10">
                 <div className="flex items-center gap-3 px-3 py-2 mb-2">
-                    <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+                    <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0">
                         <UserIcon className="h-5 w-5" />
                     </div>
                     <div className="flex-1 overflow-hidden">
@@ -100,38 +110,72 @@ export default function DashboardLayout({
         </div>
     )
 
+    if (loading) return null
+
     return (
-        <div className="min-h-screen bg-background flex">
-            {/* Desktop Sidebar */}
-            <aside className="hidden md:flex w-64 flex-col fixed inset-y-0">
-                <SidebarContent />
+        <div className="h-screen w-screen overflow-hidden bg-gray-50/50 flex transition-all duration-300">
+            {/* Desktop Sidebar - Collapsible */}
+            <aside
+                className={cn(
+                    "hidden md:flex flex-col fixed inset-y-0 left-0 bg-white z-30 transition-all duration-300 ease-in-out border-r border-gray-200 h-full",
+                    isSidebarCollapsed ? "w-0 -translate-x-full opacity-0 overflow-hidden" : "w-64 translate-x-0 opacity-100"
+                )}
+            >
+                <div className="w-64 h-full"> {/* Inner container to maintain width during animation */}
+                    <SidebarContent />
+                </div>
             </aside>
 
             {/* Mobile Sidebar */}
             <div className={cn(
                 "fixed inset-0 z-50 md:hidden transition-opacity duration-300",
-                isSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             )}>
-                <div className="absolute inset-0 bg-black/50" onClick={() => setIsSidebarOpen(false)} />
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
                 <aside className={cn(
-                    "absolute inset-y-0 left-0 w-64 bg-white transition-transform duration-300 transform",
-                    isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    "absolute inset-y-0 left-0 w-[80%] max-w-sm bg-white transition-transform duration-300 transform shadow-2xl h-full",
+                    isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
                 )}>
                     <SidebarContent />
                 </aside>
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 md:pl-64 flex flex-col min-w-0 overflow-x-hidden">
-                <header className="md:hidden h-16 bg-white shadow-sm flex items-center px-4 sticky top-0 z-40">
-                    <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-gray-600">
-                        <Menu className="h-6 w-6" />
-                    </button>
-                    <div className="ml-4">
-                        <img src="/logo_alana.svg" alt="Alana Tours" className="h-8 w-auto" />
+            <main
+                className={cn(
+                    "flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-300 ease-in-out",
+                    // If not collapsed on desktop, add left margin
+                    !isSidebarCollapsed ? "md:ml-64" : "md:ml-0"
+                )}
+            >
+                {/* Universal Header */}
+                <header className="shrink-0 h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center px-4 md:px-6 justify-between z-20 supports-[backdrop-filter]:bg-white/60">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                            className="hidden md:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                            title={isSidebarCollapsed ? "Expandir menú" : "Colapsar menú"}
+                        >
+                            {isSidebarCollapsed ? <PanelLeftOpen className="h-6 w-6" /> : <PanelLeftClose className="h-6 w-6" />}
+                        </button>
+
+                        <button
+                            onClick={() => setIsMobileMenuOpen(true)}
+                            className="md:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100"
+                        >
+                            <Menu className="h-6 w-6" />
+                        </button>
+
+                        <div className="flex items-center gap-3">
+                            {/* Show logo only if sidebar is collapsed (or mobile) to avoid duplication */}
+                            {(isSidebarCollapsed || isMobileMenuOpen) && (
+                                <img src="/logo_alana.svg" alt="Logo" className="h-8 md:h-10 w-auto md:hidden" />
+                            )}
+                        </div>
                     </div>
                 </header>
-                <div className="p-4 md:p-8 animate-in fade-in duration-300">
+
+                <div className="flex-1 overflow-hidden relative w-full">
                     {children}
                 </div>
             </main>

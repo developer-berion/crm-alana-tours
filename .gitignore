@@ -53,3 +53,6 @@ next-env.d.ts
 !.github/**/*.yml
 !.github/**/*.json
 
+
+# Secure Notes
+LOGIN_NOTES.md

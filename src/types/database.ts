@@ -6,6 +6,7 @@ export interface Agency {
     id: string
     name: string
     created_at: string
+    deleted_at: string | null
 }
 
 export interface Branch {
@@ -50,5 +51,28 @@ export interface ActivityLog {
     field_name: string | null
     old_value: string | null
     new_value: string | null
+    created_at: string
+}
+
+export interface FlatAgencyBranchRow {
+    agency_id: string
+    agency_name: string
+    branch_id: string | null
+    branch_name: string | null
+    contact_name: string | null
+    email: string | null
+    phone: string | null
+    city: string | null
+    contact_status: ContactStatus | null
+    lead_temperature: LeadTemperature | null
+    relationship_type: RelationshipType | null
+    country: string | null
+    state: string | null
+    address: string | null
+    instagram_url: string | null
+    tiktok_url: string | null
+    facebook_url: string | null
+    website_url: string | null
+    notes: string | null
     created_at: string
 }

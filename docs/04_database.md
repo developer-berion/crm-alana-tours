@@ -5,6 +5,7 @@
 - id (uuid, pk)
 - name
 - created_at
+- deleted_at (timestamp, nullable)
 
 ## branches
 

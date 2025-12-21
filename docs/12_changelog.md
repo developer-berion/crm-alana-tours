@@ -3,18 +3,19 @@
 ## [Unreleased] - 2025-12-19
 
 ### Added
-- **Branch Details:**
-    - added "Nombre de Contacto" (Contact Name) field in the contact information section.
-    - Implemented inline editing and autosave for the contact name.
-    - Added user activity logging for changes in contact name.
+- **Branch Management:**
+    - **Quick Add Branch:** Added a "+" button in the agency row to quickly add a new branch without navigating to details.
+    - **Soft Delete:** Implemented "Archivar Agencia" functionality. Agencies are now soft-deleted (archived) instead of permanently removed.
+    - **Deleted Agencies View:** Updated API to filter out archived agencies by default.
 - **Agency List View:**
-    - Refactored grid view to a table/list view for better scalability.
-    - Added "Fecha de ingreso" (Entry Date) column.
-    - Added "Temperatura" (Lead Temperature) and "Estado" (Status) filters.
-    - Added sorting capabilities by entry date.
-    - Added "Ciudad" (City) column.
-    
+    - **Location Refactor:** Split "Ubicación" into separate "País", "Estado", and "Ciudad" columns.
+    - **Socials Management:** Added interactive social media icons (Instagram, TikTok, Facebook, Website) directly in the table with inline editing.
+    - **Enhanced Search:** Global search now filters by specific location fields (Country, State, City).
+
 ### Changed
+- **Backend:**
+    - **Branch Creation:** Made `email` field optional in the `POST /api/branches` endpoint.
+    - **Soft Delete:** Added `deleted_at` column to `agencies` table and updated delete logic to set this timestamp.
 - **Authentication:**
     - Refactored `/login` page to use Next.js Server Components.
     - Moved client-side logic (search params handling) to `LoginClient.tsx`.
