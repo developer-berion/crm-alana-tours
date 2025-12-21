@@ -14,12 +14,28 @@ export async function POST(request: Request) {
         }
 
         // Find user by email
-        const result = await pool.query(
-            'SELECT id, name, email, role, password_hash FROM profiles WHERE email = $1',
-            [email.toLowerCase()]
-        )
+        console.log(`[LOGIN_DEBUG] Searching user for email: ${email}`);
+
+        let result;
+        try {
+            result = await pool.query(
+                'SELECT id, name, email, role, password_hash FROM profiles WHERE email = $1',
+                [email.toLowerCase()]
+            )
+        } catch (dbError: any) {
+            console.error('[LOGIN_DEBUG] Database query failed:', {
+                message: dbError.message,
+                code: dbError.code,
+                detail: dbError.detail,
+                host: process.env.DB_HOST
+            });
+            throw dbError; // Re-throw to be caught by outer catch
+        }
+
+        console.log(`[LOGIN_DEBUG] User search result: ${result.rows.length} rows found`);
 
         if (result.rows.length === 0) {
+            console.log('[LOGIN_DEBUG] User not found in database');
             return NextResponse.json(
                 { error: 'Credenciales inválidas' },
                 { status: 401 }
@@ -30,13 +46,16 @@ export async function POST(request: Request) {
 
         // Verify password
         if (!user.password_hash) {
+            console.error(`[LOGIN_DEBUG] User ${user.email} has no password hash`);
             return NextResponse.json(
                 { error: 'Usuario sin contraseña configurada' },
                 { status: 401 }
             )
         }
 
+        console.log('[LOGIN_DEBUG] Verifying password...');
         const isValid = await verifyPassword(password, user.password_hash)
+        console.log(`[LOGIN_DEBUG] Password verification result: ${isValid}`);
 
         if (!isValid) {
             return NextResponse.json(
@@ -46,8 +65,10 @@ export async function POST(request: Request) {
         }
 
         // Create session
+        console.log('[LOGIN_DEBUG] Creating session...');
         const token = await createSession(user.id)
         await setSessionCookie(token)
+        console.log('[LOGIN_DEBUG] Session created successfully');
 
         return NextResponse.json({
             user: {
@@ -57,10 +78,18 @@ export async function POST(request: Request) {
                 role: user.role,
             }
         })
-    } catch (error) {
-        console.error('Login error:', error)
+    } catch (error: any) {
+        console.error('[LOGIN_DEBUG] Critical Login Error:', {
+            message: error.message,
+            stack: error.stack,
+            env: {
+                DB_HOST: process.env.DB_HOST,
+                DB_USER: process.env.DB_USER,
+                // Do not log password
+            }
+        })
         return NextResponse.json(
-            { error: 'Error interno del servidor' },
+            { error: 'Error interno del servidor', details: error.message },
             { status: 500 }
         )
     }

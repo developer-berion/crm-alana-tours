@@ -5,14 +5,11 @@ import pool from './db'
 const SESSION_COOKIE_NAME = 'session_token'
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 // 7 days in seconds
 
-// Generate a random session token
+import crypto from 'crypto'
+
+// Generate a secure random session token
 function generateSessionToken(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    let token = ''
-    for (let i = 0; i < 64; i++) {
-        token += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return token
+    return crypto.randomBytes(32).toString('hex')
 }
 
 // Hash a password
@@ -55,9 +52,13 @@ export async function createSession(userId: string): Promise<string> {
     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000)
 
     // Store session in database
+    // Store session in database
+    // We use DELETE + INSERT instead of ON CONFLICT to handle cases where 
+    // the unique constraint on user_id might be missing or different
+    await pool.query('DELETE FROM sessions WHERE user_id = $1', [userId])
+
     await pool.query(
-        `INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)
-         ON CONFLICT (user_id) DO UPDATE SET id = $1, expires_at = $3`,
+        'INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)',
         [token, userId, expiresAt]
     )
 
@@ -102,7 +103,9 @@ export async function validateSession(): Promise<{ userId: string; user: AuthUse
 
     // Check if expired
     if (new Date(session.expires_at) < new Date()) {
-        await destroySession()
+        // Do not await the destroy operation to prevent blocking the response
+        // Fire and forget, or handle in a separate cron job ideally
+        destroySession().catch(err => console.error('Failed to cleanup expired session', err))
         return null
     }
 

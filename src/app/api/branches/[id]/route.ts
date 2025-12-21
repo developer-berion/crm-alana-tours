@@ -53,6 +53,13 @@ export async function GET(
     }
 }
 
+// Whitelist of columns that can be updated directly
+const ALLOWED_UPDATE_FIELDS = new Set([
+    'branch_name', 'contact_name', 'email', 'phone', 'country', 'state', 'city',
+    'address', 'google_maps_url', 'instagram_url', 'tiktok_url', 'facebook_url',
+    'website_url', 'contact_status', 'lead_temperature', 'relationship_type', 'notes',
+])
+
 export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -67,20 +74,15 @@ export async function PUT(
         const body = await request.json()
         const { field, value, oldValue } = body
 
-        // Validate field is allowed
-        const allowedFields = [
-            'branch_name', 'contact_name', 'email', 'phone', 'country', 'state', 'city',
-            'address', 'google_maps_url', 'instagram_url', 'tiktok_url', 'facebook_url',
-            'website_url', 'contact_status', 'lead_temperature', 'relationship_type', 'notes',
-        ]
-
-        if (!allowedFields.includes(field)) {
-            return NextResponse.json({ error: 'Campo no permitido' }, { status: 400 })
+        // Strict validation against whitelist
+        if (!ALLOWED_UPDATE_FIELDS.has(field)) {
+            console.warn(`Attempt to update unauthorized field: ${field} by user ${user.id}`)
+            return NextResponse.json({ error: 'Campo no permitido o inválido' }, { status: 400 })
         }
 
-        // Update the field
+        // Safe to interpolate because we checked against a hardcoded Set of strings
         const result = await pool.query(
-            `UPDATE branches SET ${field} = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+            `UPDATE branches SET "${field}" = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
             [value, id]
         )
 
