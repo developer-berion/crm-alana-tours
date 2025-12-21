@@ -4,7 +4,9 @@ import { Agency, Branch } from '@/types/database'
 import { Phone, Mail, MapPin, Building2, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-import { AgencyWithBranches } from './AgenciesTable'
+export interface AgencyWithBranches extends Agency {
+    branches?: Branch[]
+}
 
 interface AgencyRowProps {
     agency: AgencyWithBranches
