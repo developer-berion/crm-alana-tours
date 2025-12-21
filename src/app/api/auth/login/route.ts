@@ -80,8 +80,8 @@ export async function POST(request: Request) {
         })
     } catch (error: any) {
         console.error('[LOGIN_DEBUG] Critical Login Error:', {
-            message: error.message,
-            stack: error.stack,
+            message: error?.message || 'Unknown error',
+            stack: error?.stack,
             env: {
                 DB_HOST: process.env.DB_HOST,
                 DB_USER: process.env.DB_USER,
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
             }
         })
         return NextResponse.json(
-            { error: 'Error interno del servidor', details: error.message },
+            { error: 'Error interno del servidor', details: error?.message },
             { status: 500 }
         )
     }

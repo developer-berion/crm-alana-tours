@@ -57,7 +57,7 @@ pool.on('error', (err) => {
 
 export default pool
 
-// Test connection on startup (non-blocking)
-pool.query('SELECT NOW()')
-    .then(() => console.log('✅ Database connection established successfully via ' + (isCloudRun ? 'socket' : 'TCP')))
-    .catch((err) => console.error('❌ FATAL: Could not establish initial database connection:', err))
+// Test connection on startup (non-blocking) - DISABLED for build safety
+// pool.query('SELECT NOW()')
+//    .then(() => console.log('✅ Database connection established successfully via ' + (isCloudRun ? 'socket' : 'TCP')))
+//    .catch((err) => console.error('❌ FATAL: Could not establish initial database connection:', err))
