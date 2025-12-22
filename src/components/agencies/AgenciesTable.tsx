@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { FlatAgencyBranchRow, ContactStatus, LeadTemperature, RelationshipType } from '@/types/database'
-import { Plus, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, ArrowUp, ArrowDown, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { Tooltip } from 'react-tooltip'
 import { z } from 'zod'
 import SocialsCell from './SocialsCell'
@@ -117,6 +118,34 @@ export default function AgenciesTable({ agencies: initialAgencies, loading, clas
         return processed
     }, [data, searchTerm, sortConfig])
 
+    // --- Export Logic ---
+    const handleExport = () => {
+        const formattedData = data.map(item => ({
+            "Nombre Agencia": item.agency_name || '',
+            "Sede": item.branch_name || '',
+            "Contacto": item.contact_name || '',
+            "Estatus": STATUS_OPTIONS.find(o => o.value === item.contact_status)?.label || item.contact_status || '',
+            "Temperatura": TEMP_OPTIONS.find(o => o.value === item.lead_temperature)?.label || item.lead_temperature || '',
+            "Relación": REL_OPTIONS.find(o => o.value === item.relationship_type)?.label || item.relationship_type || '',
+            "País": item.country || '',
+            "Estado": item.state || '',
+            "Ciudad": item.city || '',
+            "Email": item.email || '',
+            "Teléfono": item.phone || '',
+            "Instagram": item.instagram_url || '',
+            "TikTok": item.tiktok_url || '',
+            "Website": item.website_url || '',
+            "Facebook": item.facebook_url || '',
+            "Notas": item.notes || '',
+            "Fecha Registro": item.created_at ? new Date(item.created_at).toLocaleDateString() : ''
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(formattedData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Agencias");
+        XLSX.writeFile(wb, "agencias_crm_export.xlsx");
+    };
+
     // --- Editing Logic ---
     const saveCell = async (row: FlatAgencyBranchRow, field: keyof FlatAgencyBranchRow | 'socials_update', customValue: any) => {
         const rowId = row.branch_id;
@@ -216,15 +245,24 @@ export default function AgenciesTable({ agencies: initialAgencies, loading, clas
 
     return (
         <div className={`space-y-4 flex flex-col ${className}`}>
-            {/* Local Search Bar */}
-            <div className="relative shrink-0">
-                <input
-                    type="text"
-                    placeholder="Buscar por nombre, país, estado, ciudad, estatus..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-4 pr-10 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm text-sm"
-                />
+            {/* Local Search and Export */}
+            <div className="flex items-center gap-4 shrink-0">
+                <div className="relative flex-1">
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre, país, estado, ciudad, estatus..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-4 pr-10 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm text-sm"
+                    />
+                </div>
+                <button
+                    onClick={handleExport}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium text-sm transition-colors shadow-sm whitespace-nowrap"
+                >
+                    <Download size={16} />
+                    Exportar
+                </button>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col flex-1 min-h-0">

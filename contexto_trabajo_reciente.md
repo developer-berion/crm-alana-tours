@@ -43,3 +43,8 @@ Se han implementado mejoras significativas en la gestión de agencias, incluyend
 - `src/components/agencies/EmailsCell.tsx`: Nuevo componente de gestión de correos.
 - `docs/12_changelog.md`: Actualizado con el registro de cambios.
 
+### 6. Exportación de Agencias (Excel)
+- **Funcionalidad:** Se agregó un botón "Exportar" en el panel de control de agencias.
+- **Formato:** Genera un archivo `.xlsx` con toda la información visible en la tabla.
+- **Datos Incluidos:** Nombre, Sede, Contacto, Estatus, Temperatura, Relación, Ubicación (País, Estado, Ciudad), Datos de Contacto (Email, Teléfono) y Redes Sociales.
+
