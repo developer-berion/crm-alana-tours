@@ -14,6 +14,18 @@ import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { countries, statesByCountry, Country } from '@/utils/locationData'
 
+const tempColors: Record<string, string> = {
+    cold: 'bg-blue-50 text-blue-600 border-blue-100',
+    warm: 'bg-orange-50 text-orange-600 border-orange-100',
+    hot: 'bg-red-50 text-red-600 border-red-100'
+}
+
+const tempLabels: Record<string, string> = {
+    cold: 'Frío',
+    warm: 'Tibio',
+    hot: 'Caliente'
+}
+
 export default function BranchDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const [branch, setBranch] = useState<Branch | null>(null)
@@ -153,6 +165,11 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
             console.error('Error archiving note:', error)
         }
         setIsSaving(false)
+    }
+
+    const handleUpdateEmails = (emails: string[]) => {
+        const filtered = emails.filter(e => e.trim() !== '')
+        handleUpdateBranch('email', filtered.join(', '))
     }
 
     if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
