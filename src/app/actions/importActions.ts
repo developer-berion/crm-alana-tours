@@ -2,6 +2,7 @@
 
 import pool from '@/lib/db'
 import { AgencyImportInput } from '@/utils/importService'
+import { getCurrentUser } from '@/lib/auth'
 
 export type ImportActionResult = {
     success: boolean
@@ -14,7 +15,17 @@ export type ImportActionResult = {
     details: string[]
 }
 
-export async function importAgencies(data: AgencyImportInput[], userId: string): Promise<ImportActionResult> {
+export async function importAgencies(data: AgencyImportInput[]): Promise<ImportActionResult> {
+    const currentUser = await getCurrentUser()
+
+    if (!currentUser) {
+        return {
+            success: false,
+            summary: { total: 0, imported: 0, duplicates: 0, errors: 0 },
+            details: ['Usuario no autenticado']
+        }
+    }
+
     const client = await pool.connect()
 
     let imported = 0
@@ -103,7 +114,7 @@ export async function importAgencies(data: AgencyImportInput[], userId: string):
                 await client.query(
                     `INSERT INTO agency_activity_log (branch_id, user_id, action_type, new_value)
                      VALUES ($1, $2, $3, $4)`,
-                    [branchId, userId, 'bulk_import_create', 'Importado masivamente']
+                    [branchId, currentUser.id, 'bulk_import_create', 'Importado masivamente']
                 )
 
                 imported++
@@ -122,7 +133,7 @@ export async function importAgencies(data: AgencyImportInput[], userId: string):
             await client.query(
                 `INSERT INTO import_logs (file_name, uploaded_by, total_rows, valid_rows, duplicate_rows, invalid_rows)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                ['Bulk Import Batch', userId, data.length, imported, duplicates, errors]
+                ['Bulk Import Batch', currentUser.id, data.length, imported, duplicates, errors]
             )
         } catch (logLimitError) {
             console.warn("Could not write separate import_log", logLimitError)

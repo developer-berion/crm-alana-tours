@@ -4,8 +4,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { FlatAgencyBranchRow, ContactStatus, LeadTemperature, RelationshipType } from '@/types/database'
 import { Plus, ArrowUp, ArrowDown } from 'lucide-react'
+import { Tooltip } from 'react-tooltip'
 import { z } from 'zod'
 import SocialsCell from './SocialsCell'
+import EmailsCell from './EmailsCell'
 import EditPopoverCell from '../ui/EditPopoverCell'
 import AddBranchModal from '@/components/agencies/AddBranchModal'
 
@@ -237,7 +239,7 @@ export default function AgenciesTable({ agencies: initialAgencies, loading, clas
                                 {/* 1. Agency Name - Sticky Left 12 (3rem) */}
                                 <th
                                     onClick={() => handleSort('agency_name')}
-                                    className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 min-w-[200px] sticky left-12 z-40 bg-gray-50 border-r border-gray-200 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.1)]"
+                                    className="px-4 py-3 text-left font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 w-[220px] max-w-[220px] sticky left-12 z-40 bg-gray-50 border-r border-gray-200 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.1)]"
                                 >
                                     Agencia {getSortIcon('agency_name')}
                                 </th>
@@ -290,9 +292,15 @@ export default function AgenciesTable({ agencies: initialAgencies, loading, clas
                                         <td className="sticky left-0 bg-white group-hover:bg-gray-50 px-4 py-2 text-center text-gray-400 text-xs font-mono border-r border-gray-100 z-20 w-12">
                                             {index + 1}
                                         </td>
-                                        <td className="sticky left-12 bg-white group-hover:bg-gray-50 px-4 py-2 border-r border-gray-200 font-medium text-gray-900 z-20 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.1)]">
-                                            <div className="flex justify-between items-center group">
-                                                <EditPopoverCell value={row.agency_name} label="Agencia" onSave={(val) => saveCell(row, 'agency_name', val)} onArchive={() => archiveAgency(row)} />
+                                        <td className="sticky left-12 bg-white group-hover:bg-gray-50 px-4 py-2 border-r border-gray-200 font-medium text-gray-900 z-20 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.1)] max-w-[220px]">
+                                            <div className="flex justify-between items-center group" title={row.agency_name || ''}>
+                                                <EditPopoverCell
+                                                    value={row.agency_name}
+                                                    label="Agencia"
+                                                    onSave={(val) => saveCell(row, 'agency_name', val)}
+                                                    onArchive={() => archiveAgency(row)}
+                                                    className="truncate block w-full text-sm font-medium text-gray-900"
+                                                />
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -334,7 +342,10 @@ export default function AgenciesTable({ agencies: initialAgencies, loading, clas
                                             <EditPopoverCell value={row.city} label="Ciudad" onSave={(val) => saveCell(row, 'city', val)} placeholder="-" />
                                         </td>
                                         <td className="px-4 py-2 border-r border-gray-100">
-                                            <EditPopoverCell value={row.email} label="Email" type="email" onSave={(val) => saveCell(row, 'email', val)} className="text-blue-600 max-w-[150px]" placeholder="-" />
+                                            <EmailsCell
+                                                initialValue={row.email}
+                                                onSave={(val) => saveCell(row, 'email', val)}
+                                            />
                                         </td>
                                         <td className="px-4 py-2 border-r border-gray-100">
                                             <EditPopoverCell value={row.phone} label="Teléfono" type="phone" onSave={(val) => saveCell(row, 'phone', val)} placeholder="-" />

@@ -3,6 +3,7 @@
 import { Agency, Branch } from '@/types/database'
 import { Phone, Mail, MapPin, Building2, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import EmailsCell from './EmailsCell'
 
 export interface AgencyWithBranches extends Agency {
     branches?: Branch[]
@@ -12,6 +13,7 @@ interface AgencyRowProps {
     agency: AgencyWithBranches
     primaryBranch?: Branch
     onAddBranch?: (agencyId: string, agencyName: string) => void
+    onUpdateBranch?: (branchId: string, field: string, value: any) => Promise<void>
 }
 
 const statusColors: Record<string, string> = {
@@ -96,96 +98,106 @@ export default function AgencyRow({ agency, primaryBranch, onAddBranch }: Agency
 
                 {/* Contact (Email) */}
                 <div className="col-span-4 lg:col-span-3 hidden md:flex flex-col justify-center min-w-0">
-                    {primaryBranch?.email ? (
-                        <div className="flex items-center gap-2 text-sm text-gray-600 truncate">
-                            <Mail size={14} className="shrink-0 opacity-50" />
-                            <span className="truncate">{primaryBranch.email}</span>
+                    <div className="col-span-4 lg:col-span-3 hidden md:flex flex-col justify-center min-w-0">
+                        <div className="w-full">
+                            <EmailsCell
+                                initialValue={primaryBranch?.email}
+                                onSave={async (val) => {
+                                    if (primaryBranch?.id && onUpdateBranch) {
+                                        await onUpdateBranch(primaryBranch.id, 'email', val)
+                                        // Hack refresh is handled by parent usually?
+                                        // AgencyRow is mostly read-only except this.
+                                        // If no handler, we might fail silently or just log example.
+                                        console.log('Update email', val)
+                                    } else {
+                                        // Fallback direct update if needed or just alert
+                                        console.warn('No update handler provided for AgencyRow')
+                                    }
+                                }}
+                            />
                         </div>
-                    ) : (
-                        <span className="text-xs text-gray-400 italic">Sin email</span>
-                    )}
-                    {primaryBranch?.phone && (
-                        <div className="flex items-center gap-2 text-xs text-gray-400 mt-1 truncate">
-                            <Phone size={12} className="shrink-0 opacity-50" />
-                            <span className="truncate">{primaryBranch.phone.split(',')[0]}</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Location - Country */}
-                <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center gap-2 text-sm text-gray-600">
-                    {primaryBranch?.country ? (
-                        <>
-                            <MapPin size={14} className="shrink-0 opacity-50" />
-                            <span className="truncate">{primaryBranch.country}</span>
-                        </>
-                    ) : (
-                        <span className="text-xs text-gray-400 italic">-</span>
-                    )}
-                </div>
-
-                {/* Location - City */}
-                <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center text-sm text-gray-600">
-                    <span className="truncate">{primaryBranch?.city || '-'}</span>
-                </div>
-
-                {/* Date */}
-                <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center text-sm text-gray-600">
-                    {agency.created_at ? new Date(agency.created_at).toLocaleDateString() : '-'}
-                </div>
-
-                {/* Branches Count */}
-                <div className="col-span-2 lg:col-span-1 flex items-center justify-center">
-                    <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
-                        {agency.branches?.length || 0}
-                    </span>
-                </div>
-
-                {/* Status & Temp */}
-                <div className="col-span-3 lg:col-span-2 flex flex-wrap gap-2 items-center">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[contactStatus]}`}>
-                        {statusLabels[contactStatus]}
-                    </span>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${tempColors[leadTemp]}`}>
-                        {tempLabels[leadTemp]}
-                    </span>
-                </div>
-
-
-            </div>
-
-            {/* Mobile Layout (< 768px) */}
-            <div className="md:hidden p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                            <Building2 size={18} />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-900">{agency.name}</h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                                {primaryBranch?.contact_name && <span>{primaryBranch.contact_name}</span>}
-                                {primaryBranch?.country && (
-                                    <>
-                                        <span>•</span>
-                                        <span>{primaryBranch.country}</span>
-                                    </>
-                                )}
+                        {primaryBranch?.phone && (
+                            <div className="flex items-center gap-2 text-xs text-gray-400 mt-1 truncate">
+                                <Phone size={12} className="shrink-0 opacity-50" />
+                                <span className="truncate">{primaryBranch.phone.split(',')[0]}</span>
                             </div>
-                        </div>
+                        )}
                     </div>
 
+                    {/* Location - Country */}
+                    <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center gap-2 text-sm text-gray-600">
+                        {primaryBranch?.country ? (
+                            <>
+                                <MapPin size={14} className="shrink-0 opacity-50" />
+                                <span className="truncate">{primaryBranch.country}</span>
+                            </>
+                        ) : (
+                            <span className="text-xs text-gray-400 italic">-</span>
+                        )}
+                    </div>
+
+                    {/* Location - City */}
+                    <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center text-sm text-gray-600">
+                        <span className="truncate">{primaryBranch?.city || '-'}</span>
+                    </div>
+
+                    {/* Date */}
+                    <div className="col-span-1 lg:col-span-1 hidden lg:flex items-center text-sm text-gray-600">
+                        {agency.created_at ? new Date(agency.created_at).toLocaleDateString() : '-'}
+                    </div>
+
+                    {/* Branches Count */}
+                    <div className="col-span-2 lg:col-span-1 flex items-center justify-center">
+                        <span className="text-sm font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
+                            {agency.branches?.length || 0}
+                        </span>
+                    </div>
+
+                    {/* Status & Temp */}
+                    <div className="col-span-3 lg:col-span-2 flex flex-wrap gap-2 items-center">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[contactStatus]}`}>
+                            {statusLabels[contactStatus]}
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${tempColors[leadTemp]}`}>
+                            {tempLabels[leadTemp]}
+                        </span>
+                    </div>
+
+
                 </div>
 
-                <div className="flex flex-wrap gap-2 pl-[3.25rem]">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium ${statusColors[contactStatus]}`}>
-                        {statusLabels[contactStatus]}
-                    </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${tempColors[leadTemp]}`}>
-                        {tempLabels[leadTemp]}
-                    </span>
+                {/* Mobile Layout (< 768px) */}
+                <div className="md:hidden p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                <Building2 size={18} />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-900">{agency.name}</h3>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                    {primaryBranch?.contact_name && <span>{primaryBranch.contact_name}</span>}
+                                    {primaryBranch?.country && (
+                                        <>
+                                            <span>•</span>
+                                            <span>{primaryBranch.country}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pl-[3.25rem]">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium ${statusColors[contactStatus]}`}>
+                            {statusLabels[contactStatus]}
+                        </span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium border ${tempColors[leadTemp]}`}>
+                            {tempLabels[leadTemp]}
+                        </span>
+                    </div>
                 </div>
             </div>
-        </div>
-    )
+            )
 }

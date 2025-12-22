@@ -48,10 +48,7 @@ export default function ImportPage() {
 
         try {
             // Call Server Action
-            // Using a system ID for import operations
-            const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
-
-            const response = await importAgencies(result.valid, SYSTEM_USER_ID)
+            const response = await importAgencies(result.valid)
 
             if (response.success) {
                 setImportSummary(response.summary)
@@ -187,9 +184,48 @@ export default function ImportPage() {
                         </div>
                     </div>
 
+
+                    {result.invalid.length > 0 && (
+                        <div className="bg-white rounded-2xl border border-error/20 shadow-sm overflow-hidden">
+                            <div className="p-4 bg-error/5 border-b border-error/10">
+                                <h2 className="font-bold text-error flex items-center gap-2">
+                                    <AlertCircle className="h-5 w-5" />
+                                    Registros Inválidos ({result.invalid.length})
+                                </h2>
+                                <p className="text-xs text-error/80 mt-1">Estos registros no se importarán. Corrige los errores en tu archivo.</p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th className="px-6 py-3 font-bold text-gray-500 uppercase tracking-wider w-1/4">Agencia</th>
+                                            <th className="px-6 py-3 font-bold text-gray-500 uppercase tracking-wider">Razón del Error</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {result.invalid.map((item, i) => (
+                                            <tr key={i} className="hover:bg-error/5 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-gray-900 align-top">
+                                                    {item.row.agency_name || item.row.Agencia || <span className="text-gray-400 italic">Sin nombre</span>}
+                                                </td>
+                                                <td className="px-6 py-4 text-error align-top">
+                                                    <ul className="list-disc list-inside space-y-1">
+                                                        {item.errors.map((err, j) => (
+                                                            <li key={j}>{err}</li>
+                                                        ))}
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                            <h2 className="font-bold text-gray-900">Vista Previa (Primeros 10 válidos)</h2>
+                            <h2 className="font-bold text-gray-900">Vista Previa (Total: {result.valid.length})</h2>
                             <div className="flex gap-2">
                                 <button onClick={() => { setResult(null); setFile(null); }} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Cancelar</button>
                                 <button
@@ -206,9 +242,9 @@ export default function ImportPage() {
                                 </button>
                             </div>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-gray-50 border-b border-gray-200">
+                                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                                     <tr>
                                         <th className="px-6 py-3 font-bold text-gray-500 uppercase tracking-wider">Agencia</th>
                                         <th className="px-6 py-3 font-bold text-gray-500 uppercase tracking-wider">Email</th>
@@ -217,7 +253,7 @@ export default function ImportPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {result.valid.slice(0, 10).map((row, i) => (
+                                    {result.valid.map((row, i) => (
                                         <tr key={i} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 font-medium text-gray-900">{row.agency_name}</td>
                                             <td className="px-6 py-4 text-gray-600">{row.email}</td>
@@ -238,6 +274,8 @@ export default function ImportPage() {
                     </div>
                 </div>
             )}
+            {/* Spacer for scrolling */}
+            <div className="h-8"></div>
         </div>
     )
 }

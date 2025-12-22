@@ -77,6 +77,57 @@ export async function parseFile(file: File): Promise<any[]> {
     })
 }
 
+const NORMALIZATION_MAP = {
+    contact_status: {
+        'no contactado': 'not_contacted',
+        'contactado': 'contacted',
+        'esperando respuesta': 'waiting_response',
+        'rechazado': 'rejected',
+        'interesado': 'interested',
+        'no contactad': 'not_contacted', // Handle truncated text from screenshot
+        'sin contacto': 'not_contacted'
+    },
+    lead_temperature: {
+        'frio': 'cold',
+        'frío': 'cold',
+        'tibio': 'warm',
+        'caliente': 'hot'
+    },
+    relationship_type: {
+        'lead': 'lead',
+        'cliente': 'client'
+    }
+}
+
+function normalizeValue(field: string, value: string): string {
+    if (!value) return ''
+    const normalized = value.toString().toLowerCase().trim()
+
+    // Check specific normalization maps
+    if (field === 'contact_status' && (NORMALIZATION_MAP.contact_status as any)[normalized]) {
+        return (NORMALIZATION_MAP.contact_status as any)[normalized]
+    }
+    if (field === 'lead_temperature' && (NORMALIZATION_MAP.lead_temperature as any)[normalized]) {
+        return (NORMALIZATION_MAP.lead_temperature as any)[normalized]
+    }
+    if (field === 'relationship_type' && (NORMALIZATION_MAP.relationship_type as any)[normalized]) {
+        return (NORMALIZATION_MAP.relationship_type as any)[normalized]
+    }
+
+    return value
+}
+
+function sanitizeUrl(url: string): string {
+    if (!url) return ''
+    try {
+        const schema = z.string().url()
+        const result = schema.safeParse(url)
+        return result.success ? url : ''
+    } catch {
+        return ''
+    }
+}
+
 export function validateAndNormalize(data: any[]): ImportResult {
     const result: ImportResult = {
         valid: [],
@@ -98,12 +149,12 @@ export function validateAndNormalize(data: any[]): ImportResult {
             country: row["Country"] || row.country || row.Pais || row.País || '',
             state: row["State"] || row.state || row.Provincia || row.Estado || '',
             city: row["City"] || row.city || row.Ciudad || '',
-            instagram_url: row["Instagram"] || row.instagram_url || row.Instagram || '',
-            tiktok_url: row["TikTok"] || row.tiktok_url || row.TikTok || '',
-            website_url: row["Website"] || row.website_url || row.Web || '',
-            contact_status: (row["Contact Status"] || row.contact_status || 'not_contacted'),
-            lead_temperature: (row["Temperature"] || row.lead_temperature || 'cold'),
-            relationship_type: (row["Relationship"] || row.relationship_type || 'lead'),
+            instagram_url: sanitizeUrl(row["Instagram"] || row.instagram_url || row.Instagram || ''),
+            tiktok_url: sanitizeUrl(row["TikTok"] || row.tiktok_url || row.TikTok || ''),
+            website_url: sanitizeUrl(row["Website"] || row.website_url || row.Web || ''),
+            contact_status: normalizeValue('contact_status', (row["Contact Status"] || row.contact_status || 'not_contacted').toString().toLowerCase()),
+            lead_temperature: normalizeValue('lead_temperature', (row["Temperature"] || row.lead_temperature || 'cold').toString().toLowerCase()),
+            relationship_type: normalizeValue('relationship_type', (row["Relationship"] || row.relationship_type || 'lead').toString().toLowerCase()),
             notes: row["Initial Note"] || row.notes || row.Notas || '',
         }
 
@@ -112,7 +163,7 @@ export function validateAndNormalize(data: any[]): ImportResult {
 
         if (!safeParse.success) {
             const errors = safeParse.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
-            result.invalid.push({ row, errors })
+            result.invalid.push({ row: raw, errors })
             return
         }
 

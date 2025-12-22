@@ -13,6 +13,7 @@ interface EditPopoverCellProps {
     options?: { value: string; label: string }[]
     className?: string
     placeholder?: string
+    customDisplay?: React.ReactNode
 }
 
 export default function EditPopoverCell({
@@ -23,7 +24,8 @@ export default function EditPopoverCell({
     type = 'text',
     options = [],
     className = '',
-    placeholder = 'Empty'
+    placeholder = 'Empty',
+    customDisplay
 }: EditPopoverCellProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
@@ -191,7 +193,9 @@ export default function EditPopoverCell({
                 title="Click para editar"
             >
                 {/* Display Value */}
-                {value ? (
+                {customDisplay ? (
+                    customDisplay
+                ) : value ? (
                     <span className="truncate block">{value}</span>
                 ) : (
                     <span className="text-gray-400 italic text-xs">{placeholder}</span>

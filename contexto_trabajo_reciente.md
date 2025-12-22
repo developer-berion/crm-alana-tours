@@ -27,10 +27,19 @@ Se han implementado mejoras significativas en la gestión de agencias, incluyend
 - **Modal Integrado:** Al hacer clic, se abre el modal de creación de sucursal (`AddBranchModal`) pre-llenado con el ID de la agencia, evitando la navegación a la vista de detalles.
 - **Backend Fix:** Se corrigió el endpoint de creación de sucursales para permitir que el campo `email` sea opcional, resolviendo un bloqueo en el flujo de creación.
 
+### 5. Gestión de Múltiples Correos (EmailsCell)
+- **Componente EmailsCell:** Implementación de una celda interactiva para gestionar múltiples correos por agencia.
+- **Popover UI:** Interfaz estilo popover que permite agregar, editar y eliminar correos dinámicamente.
+- **Visualización:** Muestra el correo principal y un badge (e.g., `+2`) si hay más direcciones.
+- **Persistencia:** Guarda la lista de correos como un string separado por comas, manteniendo compatibilidad.
+- **Bug Fix:** Se corrigió un problema crítico de pérdida de foco al escribir, extrayendo el contenido del popover y estabilizando las keys de renderizado.
+
 ## Archivos Clave Modificados/Creados
 - `src/app/api/branches/route.ts`: Corrección de validación opcional.
-- `src/components/agencies/AgenciesTable.tsx`: Integración de nuevas columnas, botón de Quick Add y Modal.
-- `src/components/agencies/AgencyRow.tsx`: Soporte para botón de acción rápida.
+- `src/components/agencies/AgenciesTable.tsx`: Integración de nuevas columnas, botón de Quick Add, Modal y EmailsCell.
+- `src/components/agencies/AgencyRow.tsx`: Soporte para botón de acción rápida y EmailsCell.
 - `src/components/agencies/AddBranchModal.tsx`: Movido a componentes reutilizables.
 - `src/components/agencies/SocialsCell.tsx`: Nuevo componente de redes sociales.
+- `src/components/agencies/EmailsCell.tsx`: Nuevo componente de gestión de correos.
 - `docs/12_changelog.md`: Actualizado con el registro de cambios.
+

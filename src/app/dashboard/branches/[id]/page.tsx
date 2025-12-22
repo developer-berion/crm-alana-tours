@@ -28,6 +28,7 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
     const [editingNoteContent, setEditingNoteContent] = useState('')
     const [showArchived, setShowArchived] = useState(false)
     const [phoneList, setPhoneList] = useState<string[]>([])
+    const [emailList, setEmailList] = useState<string[]>([])
     const router = useRouter()
 
     useEffect(() => {
@@ -41,6 +42,7 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                     setNotes(data.notes || [])
                     setLogs(data.activity || [])
                     setPhoneList(data.branch?.phone ? data.branch.phone.split(',').map((p: string) => p.trim()) : [])
+                    setEmailList(data.branch?.email ? data.branch.email.split(',').map((e: string) => e.trim()) : [])
                     if (data.usersMap) {
                         setAuthors(data.usersMap)
                     }
@@ -53,11 +55,11 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
         fetchData()
     }, [id])
 
-    const handleUpdateBranch = async (field: keyof Branch, value: any) => {
+    const handleUpdateBranch = async (field: keyof Branch, value: any, explicitOldValue?: any) => {
         if (!branch) return
         setIsSaving(true)
 
-        const oldValue = branch[field]
+        const oldValue = explicitOldValue !== undefined ? explicitOldValue : branch[field]
         try {
             const res = await fetch(`/api/branches/${id}`, {
                 method: 'PUT',
@@ -382,15 +384,48 @@ export default function BranchDetailsPage({ params }: { params: Promise<{ id: st
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <Mail className="h-5 w-5 text-gray-400" />
-                                    <input
-                                        className="text-sm border-none p-0 focus:ring-0 w-full"
-                                        value={branch.email || ''}
-                                        placeholder="Email"
-                                        onChange={(e) => setBranch({ ...branch, email: e.target.value })}
-                                        onBlur={(e) => handleUpdateBranch('email', e.target.value)}
-                                    />
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Mail className="h-4 w-4 text-gray-400" />
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Correos</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setEmailList([...emailList, ''])}
+                                            className="text-primary hover:text-primary/80 transition-colors"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2 pl-6">
+                                        {emailList.map((email, index) => (
+                                            <div key={index} className="flex items-center gap-2">
+                                                <input
+                                                    className="text-sm border-b border-gray-100 py-1 focus:ring-0 flex-1"
+                                                    value={email}
+                                                    placeholder="Email"
+                                                    onChange={(e) => {
+                                                        const newList = [...emailList];
+                                                        newList[index] = e.target.value;
+                                                        setEmailList(newList);
+                                                    }}
+                                                    onBlur={() => handleUpdateEmails(emailList)}
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const newList = emailList.filter((_, i) => i !== index);
+                                                        handleUpdateEmails(newList);
+                                                    }}
+                                                    className="text-gray-300 hover:text-error transition-colors"
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {emailList.length === 0 && (
+                                            <p className="text-xs text-gray-400 italic">No hay correos registrados</p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="space-y-4">
