@@ -14,6 +14,7 @@ interface EditPopoverCellProps {
     className?: string
     placeholder?: string
     customDisplay?: React.ReactNode
+    autosave?: boolean
 }
 
 export default function EditPopoverCell({
@@ -25,7 +26,8 @@ export default function EditPopoverCell({
     options = [],
     className = '',
     placeholder = 'Empty',
-    customDisplay
+    customDisplay,
+    autosave = false
 }: EditPopoverCellProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
@@ -34,40 +36,71 @@ export default function EditPopoverCell({
     const triggerRef = useRef<HTMLDivElement>(null)
     const popoverRef = useRef<HTMLDivElement>(null)
 
+    // Autosave timer ref
+    const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+    // CRITICAL FIX: Only sync from parent when the popover is CLOSED.
     useEffect(() => {
-        setTempValue(value || '')
-    }, [value])
+        if (!isOpen) {
+            setTempValue(value || '')
+        }
+    }, [value, isOpen])
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
+        }
+    }, [])
 
     const handleOpen = (e: React.MouseEvent) => {
         e.stopPropagation()
         if (triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect()
-            // Position slightly above the cell by default, or below if too close to top
-            // Using fixed positioning relative to viewport
-            let top = rect.top + window.scrollY - 10 // shifted up slightly
-            const left = rect.left + window.scrollX - 10
+            let top = rect.top
 
-            // Adjust if too close to bottom (simplified logic for now)
             if (rect.bottom > window.innerHeight - 200) {
-                top = rect.top - 100 // Move up more
+                top = rect.top - 100
             }
 
-            setPosition({ top: rect.top, left: rect.left })
+            setPosition({ top, left: rect.left })
+            setTempValue(value || '')
             setIsOpen(true)
         }
     }
 
-    const handleSave = async () => {
-        if (tempValue !== value) {
-            await onSave(tempValue)
+    const performSave = async (val: string) => {
+        if (val !== value) {
+            await onSave(val)
         }
+    }
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const newValue = e.target.value
+        setTempValue(newValue)
+
+        if (autosave) {
+            if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
+            autosaveTimerRef.current = setTimeout(() => {
+                performSave(newValue)
+            }, 500)
+        }
+    }
+
+    const handleManualSave = async () => {
+        if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current)
+        await performSave(tempValue)
         setIsOpen(false)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && !e.shiftKey && type !== 'textarea') {
             e.preventDefault()
-            handleSave()
+            handleManualSave()
+        }
+        if (e.key === 'Enter' && e.ctrlKey && type === 'textarea') {
+            e.preventDefault()
+            handleManualSave()
         }
         if (e.key === 'Escape') {
             setIsOpen(false)
@@ -76,19 +109,26 @@ export default function EditPopoverCell({
         }
     }
 
-    // Portal Content
-    const PopoverContent = () => (
+    const handleClose = () => {
+        setIsOpen(false)
+        setShowArchiveConfirm(false)
+    }
+
+    // Render the popover content INLINE (not as a separate component)
+    // This prevents React from remounting the textarea on each state change
+    const portalContent = isOpen ? (
         <div
             className="fixed inset-0 z-[9999] isolate"
             onClick={(e) => {
-                if (e.target === e.currentTarget) setIsOpen(false)
+                if (e.target === e.currentTarget) {
+                    handleClose()
+                }
             }}
         >
-            {/* Backdrop invisible but blocks interaction with other things */}
             <div
                 ref={popoverRef}
                 style={{
-                    top: Math.max(10, position.top - 20), // Slight offset
+                    top: Math.max(10, position.top - 20),
                     left: Math.max(10, position.left - 10),
                     minWidth: '300px'
                 }}
@@ -97,7 +137,7 @@ export default function EditPopoverCell({
             >
                 <div className="flex justify-between items-center mb-3">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
-                    <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
                         <X size={14} />
                     </button>
                 </div>
@@ -107,9 +147,9 @@ export default function EditPopoverCell({
                         <select
                             autoFocus
                             value={tempValue}
-                            onChange={(e) => setTempValue(e.target.value)}
+                            onChange={handleChange}
                             onKeyDown={handleKeyDown}
-                            className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                            className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-sans"
                         >
                             {options.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -119,10 +159,10 @@ export default function EditPopoverCell({
                         <textarea
                             autoFocus
                             value={tempValue}
-                            onChange={(e) => setTempValue(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' && e.ctrlKey) handleSave() }}
+                            onChange={handleChange}
+                            onKeyDown={handleKeyDown}
                             rows={3}
-                            className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none"
+                            className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none font-sans"
                             placeholder={placeholder}
                         />
                     ) : (
@@ -130,9 +170,9 @@ export default function EditPopoverCell({
                             autoFocus
                             type={type}
                             value={tempValue}
-                            onChange={(e) => setTempValue(e.target.value)}
+                            onChange={handleChange}
                             onKeyDown={handleKeyDown}
-                            className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                            className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-sans"
                             placeholder={placeholder}
                         />
                     )}
@@ -160,18 +200,20 @@ export default function EditPopoverCell({
                                 </button>
                             )
                         ) : (
-                            <div></div>
+                            <div className="text-[10px] text-gray-300 italic">
+                                {autosave ? 'Autosave activo' : ''}
+                            </div>
                         )}
 
                         <div className="flex gap-2">
                             <button
-                                onClick={() => setIsOpen(false)}
+                                onClick={handleClose}
                                 className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                             >
                                 Cancelar
                             </button>
                             <button
-                                onClick={handleSave}
+                                onClick={handleManualSave}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#006AB3] hover:bg-[#005a99] rounded-lg transition-all shadow-sm active:scale-95"
                             >
                                 <Check size={14} />
@@ -182,7 +224,7 @@ export default function EditPopoverCell({
                 </div>
             </div>
         </div>
-    )
+    ) : null
 
     return (
         <>
@@ -192,22 +234,20 @@ export default function EditPopoverCell({
                 className={`group relative cursor-pointer min-h-[24px] flex items-center ${className} hover:bg-gray-50 -m-1 p-1 rounded transition-colors`}
                 title="Click para editar"
             >
-                {/* Display Value */}
                 {customDisplay ? (
                     customDisplay
                 ) : value ? (
-                    <span className="truncate block">{value}</span>
+                    <span className="truncate block font-sans">{value}</span>
                 ) : (
-                    <span className="text-gray-400 italic text-xs">{placeholder}</span>
+                    <span className="text-gray-400 italic text-xs font-sans">{placeholder}</span>
                 )}
 
-                {/* Hover Icon */}
                 <span className="ml-2 opacity-0 group-hover:opacity-100 text-gray-300 transition-opacity">
                     <Edit2 size={12} />
                 </span>
             </div>
 
-            {isOpen && createPortal(<PopoverContent />, document.body)}
+            {portalContent && createPortal(portalContent, document.body)}
         </>
     )
 }

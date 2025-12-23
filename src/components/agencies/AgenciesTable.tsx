@@ -392,7 +392,7 @@ export default function AgenciesTable({ agencies: initialAgencies, loading, clas
                                             <SocialsCell instagram={row.instagram_url} tiktok={row.tiktok_url} website={row.website_url} facebook={row.facebook_url} onSave={(updates) => saveCell(row, 'socials_update', updates)} />
                                         </td>
                                         <td className="px-4 py-2 border-r border-gray-100 min-w-[200px]">
-                                            <EditPopoverCell value={row.notes} label="Notas" type="textarea" onSave={(val) => saveCell(row, 'notes', val)} className="text-xs text-gray-500 line-clamp-2 h-full" placeholder="Agregar nota..." />
+                                            <EditPopoverCell value={row.notes} label="Notas" type="textarea" onSave={(val) => saveCell(row, 'notes', val)} className="text-xs text-gray-500 line-clamp-2 h-full" placeholder="Agregar nota..." autosave={true} />
                                         </td>
                                         <td className="px-4 py-2 whitespace-nowrap text-gray-400 text-xs">
                                             {row.created_at ? new Date(row.created_at).toLocaleDateString() : '-'}
